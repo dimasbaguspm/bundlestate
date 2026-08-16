@@ -1,6 +1,6 @@
 import { FileArchive, UploadCloud } from "lucide-react";
+import { clsx } from "clsx";
 import { useRef, useState, type DragEvent } from "react";
-import { cx } from "./ui";
 
 interface DropzoneProps {
   onFiles: (files: File[]) => void;
@@ -50,7 +50,7 @@ export function Dropzone({ onFiles }: DropzoneProps) {
         }}
         onDragLeave={() => setDragging(false)}
         onDrop={onDrop}
-        className={cx(
+        className={clsx(
           "flex cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed px-6 py-14 text-center transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
           dragging ? "border-ink bg-surface-2" : "border-line bg-surface hover:border-ink/40",
         )}

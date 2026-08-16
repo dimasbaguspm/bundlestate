@@ -1,9 +1,5 @@
-import { clsx, type ClassValue } from "clsx";
+import { clsx } from "clsx";
 import type { ButtonHTMLAttributes, HTMLAttributes, ReactNode } from "react";
-
-export function cx(...inputs: ClassValue[]): string {
-  return clsx(inputs);
-}
 
 type ButtonVariant = "primary" | "ghost" | "danger";
 
@@ -20,7 +16,7 @@ const buttonVariants: Record<ButtonVariant, string> = {
 export function Button({ variant = "primary", className, ...props }: ButtonProps) {
   return (
     <button
-      className={cx(
+      className={clsx(
         "inline-flex h-9 cursor-pointer items-center gap-2 rounded-md px-3 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed",
         buttonVariants[variant],
         className,
@@ -33,7 +29,7 @@ export function Button({ variant = "primary", className, ...props }: ButtonProps
 export function Card({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={cx("rounded-lg border border-line bg-surface p-4 shadow-sm", className)}
+      className={clsx("rounded-lg border border-line bg-surface p-4 shadow-sm", className)}
       {...props}
     />
   );
@@ -59,7 +55,7 @@ export function Badge({
 }) {
   return (
     <span
-      className={cx(
+      className={clsx(
         "inline-flex items-center rounded-full border px-2 py-0.5 font-mono text-[11px] uppercase tracking-wide",
         badgeTones[tone],
         className,

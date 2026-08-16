@@ -1,7 +1,8 @@
 import { CheckCircle2, Loader2, OctagonX, XCircle } from "lucide-react";
+import { clsx } from "clsx";
 import type { Job } from "../state/store";
 import { abortJob } from "../state/runJob";
-import { Badge, Button, Card, cx } from "./ui";
+import { Badge, Button, Card } from "./ui";
 
 const statusLabel: Record<Job["status"], string> = {
   pending: "Queued",
@@ -53,7 +54,7 @@ export function JobsPanel({ jobs }: { jobs: Job[] }) {
       {jobs.map((job) => (
         <Card
           key={job.id}
-          className={cx("flex items-center gap-4", job.status === "error" && "border-danger/40")}
+          className={clsx("flex items-center gap-4", job.status === "error" && "border-danger/40")}
         >
           <StatusIcon status={job.status} />
           <div className="min-w-0 flex-1 space-y-1">

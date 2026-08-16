@@ -90,7 +90,8 @@ class ParseWorker implements ParseWorkerService {
   async normalize(reportId: string): Promise<BundleStateReport> {
     const job = this.jobs.get(reportId);
     if (job?.error) throw new Error(job.error);
-    if (!job?.instance) throw new Error("Report is not ready — call getProgress until phase 'done'.");
+    if (!job?.instance)
+      throw new Error("Report is not ready — call getProgress until phase 'done'.");
     job.progress = { phase: "normalizing", fraction: 0.5 };
     try {
       return await job.instance.normalize();
