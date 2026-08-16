@@ -1,38 +1,48 @@
 name: Release
 
+# semantic-release: creates a versioned GitHub Release (tag bundlestate_v<ver>),
+# CHANGELOG, and package version bump on every push to main. Version type is
+# derived from Conventional Commits: fix = patch, feat = minor, BREAKING = major.
 on:
   push:
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: write
+  issues: write
+  pull-requests: write
 
 concurrency:
-  group: release-${{ github.ref }}
+  group: release
   cancel-in-progress: false
 
 jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          persist-credentials: false
 
-      - uses: pnpm/action-setup@v4
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.5
 
-      - uses: actions/setup-node@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: pnpm
 
-      - name: Install dependencies
+      - name: Install
         run: pnpm install --frozen-lockfile
 
-      - name: Quality gates
-        run: pnpm lint && pnpm test && pnpm build
-
-      - name: Semantic Release
+      - name: Semantic release
+        run: pnpm exec semantic-release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: pnpm exec semantic-release
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}

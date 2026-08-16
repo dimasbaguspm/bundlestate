@@ -1,16 +1,17 @@
 {
   "branches": ["main"],
   "tagFormat": "bundlestate_v${version}",
-  "npmPublish": false,
   "plugins": [
+    ["@semantic-release/commit-analyzer", { "preset": "conventionalcommits" }],
+    ["@semantic-release/release-notes-generator", { "preset": "conventionalcommits" }],
+    ["@semantic-release/changelog", { "changelogFile": "CHANGELOG.md" }],
+    ["@semantic-release/npm", { "npmPublish": false }],
     [
-      "@semantic-release/commit-analyzer",
-      { "preset": "conventionalcommits" }
-    ],
-    [
-      "@semantic-release/release-notes-generator",
-      { "preset": "conventionalcommits" }
-    ],
-    "@semantic-release/github"
+      "@semantic-release/github",
+      {
+        "successComment": false,
+        "failComment": false
+      }
+    ]
   ]
 }
