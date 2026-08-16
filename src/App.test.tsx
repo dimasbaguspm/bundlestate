@@ -34,7 +34,7 @@ describe("App", () => {
   it("renders the landing page with the dropzone", () => {
     render(<App />);
 
-    expect(screen.getByText(/drag & drop your bundle/i)).toBeInTheDocument();
+    expect(screen.getByText(/drop your bundle here/i)).toBeInTheDocument();
     // bottom bar: history entrypoint present
     expect(screen.getByRole("button", { name: /history/i })).toBeInTheDocument();
   });

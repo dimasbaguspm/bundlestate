@@ -62,7 +62,7 @@ export function Dropzone({ onFiles }: DropzoneProps) {
         onDrop={onDrop}
         className={clsx(
           "flex min-h-0 w-full flex-1 cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed px-6 text-center transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
-          dragging ? "border-ink bg-surface-2" : "border-edge bg-surface hover:border-ink/40",
+          dragging ? "border-ink bg-surface-2" : "border-ink/30 bg-surface hover:border-ink/60",
         )}
       >
         {dragging ? (
@@ -71,20 +71,13 @@ export function Dropzone({ onFiles }: DropzoneProps) {
           <FileArchive size={40} className="text-dim" aria-hidden />
         )}
         <div className="space-y-1">
-          <p className="text-base font-medium">
-            Drag &amp; drop your bundle{" "}
-            <span className="font-mono text-ink">.zip</span> <span className="text-dim">·</span>{" "}
-            <span className="font-mono text-ink">.tar.gz</span> <span className="text-dim">·</span>{" "}
-            <span className="font-mono text-ink">.tgz</span>
-          </p>
+          <p className="text-base font-semibold text-ink">Drop your bundle here</p>
           <p className="text-sm text-dim">
-            or click to browse — must contain built JS with source maps
+            or click to browse · <span className="font-mono">.zip</span>{" "}
+            <span className="font-mono">.tar.gz</span> <span className="font-mono">.tgz</span>
           </p>
         </div>
-        <p className="font-mono text-xs text-dim">
-          requires inline <span className="text-ink-dim">//# sourceMappingURL=data:…</span> or
-          sidecar <span className="text-ink-dim">.map</span> files
-        </p>
+        <p className="font-mono text-xs text-dim">requires source maps</p>
       </div>
       <input
         ref={inputRef}

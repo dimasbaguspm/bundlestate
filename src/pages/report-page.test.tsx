@@ -62,7 +62,7 @@ describe("ReportPage", () => {
   it("redirects to the landing page with a banner for an unknown id", async () => {
     renderRoute("/r/does-not-exist");
 
-    expect(await screen.findByText(/drag & drop your bundle/i)).toBeInTheDocument();
+    expect(await screen.findByText(/drop your bundle here/i)).toBeInTheDocument();
     expect(
       await screen.findByText(/Report “does-not-exist” was not found/i),
     ).toBeInTheDocument();
