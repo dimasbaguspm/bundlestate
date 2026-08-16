@@ -2,6 +2,7 @@ import { expose } from "comlink";
 import { normalizeBundle, type NormalizeInput } from "@/lib/normalize";
 import type { BundleStateReport } from "@/lib/types";
 import type { NormalizerService } from "./workerTypes";
+import { trace } from "./trace";
 
 /**
  * Pollutes-free normalizer running inside its own worker. Receives the raw
@@ -13,7 +14,13 @@ export class Normalizer implements NormalizerService {
 
   async normalize(onProgress?: (fraction: number) => void): Promise<BundleStateReport> {
     onProgress?.(0.1);
+    trace("normalize-start", {});
     const report = await normalizeBundle(this.input);
+    trace("normalize-done", {
+      id: report.id,
+      packages: report.packages.length,
+      assets: report.assets.length,
+    });
     onProgress?.(1);
     return report;
   }

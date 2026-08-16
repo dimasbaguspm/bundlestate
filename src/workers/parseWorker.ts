@@ -13,6 +13,7 @@ import type {
   ParseProgress,
   ParseWorkerService,
 } from "./workerTypes";
+import { trace } from "./trace";
 
 interface Job {
   instance: Remote<NormalizerService> | null;
@@ -67,8 +68,13 @@ class ParseWorker implements ParseWorkerService {
           },
           shouldAbort: async () => (await abortHandle.isAborted()) ?? false,
         });
+        trace("extract", { entries: entries.length });
 
         const assets = collectAssets(entries);
+        trace("collect", {
+          assets: assets.length,
+          withMaps: assets.filter((a) => a.mapSources).length,
+        });
         if (assets.length === 0) {
           throw new Error("No JS assets found in the zip — expected built .js/.mjs/.cjs files.");
         }
@@ -78,10 +84,12 @@ class ParseWorker implements ParseWorkerService {
 
         job.progress = { phase: "normalizing", fraction: 0 };
         const input: NormalizeInput = { sourceName: file.name, assets, entries };
+        trace("normalize-prep", { sourceName: file.name });
         job.instance = await new this.normalizerCtor(input);
         job.progress = { phase: "done", fraction: 1 };
       } catch (error) {
         job.error = error instanceof Error ? error.message : String(error);
+        trace("error", { message: job.error });
       }
     })();
 
@@ -101,6 +109,7 @@ class ParseWorker implements ParseWorkerService {
       throw new Error("Report is not ready — call getProgress until phase 'done'.");
     job.progress = { phase: "normalizing", fraction: 0.5 };
     try {
+      trace("normalize", { reportId });
       return await job.instance.normalize();
     } finally {
       job.progress = { phase: "done", fraction: 1 };
