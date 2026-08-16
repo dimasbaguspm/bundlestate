@@ -1,13 +1,12 @@
 import { X } from "lucide-react";
 
 const STEPS = [
-  "Build your app with source maps enabled — e.g. a standard `vite build` produces `dist/` with sidecar `.map` files.",
-  "Zip that build output (`.zip`, `.tar.gz`, or `.tgz`).",
-  "Drop the zip on the landing page — or click to browse. Analysis runs entirely in your browser.",
-  "Open the report. The Treemap shows package sizes (scroll to zoom; bigger tile = bigger space).",
-  "Switch to Lineage to see how packages depend on each other — connected, drillable by package.",
-  "Use Dependencies to list every package and its dependencies-of-dependencies.",
-  "Each tab has a live filter — type a package name to isolate it for debugging.",
+  "Build your app with source maps on. A standard `vite build` outputs `dist/` with sidecar `.map` files.",
+  "Zip that build output as `.zip`, `.tar.gz`, or `.tgz`.",
+  "Drop the zip on the landing page, or click to browse. Analysis runs in your browser.",
+  "In the Treemap, bigger tiles are bigger packages. Scroll to zoom.",
+  "In Lineage, each package is a node connected to its dependencies. Packages with multiple versions show one node per version, like `foo@1.0.0` and `foo@2.0.0`.",
+  "Type in the filter to isolate a package for debugging.",
   "Nothing leaves your machine. All parsing happens in Web Workers.",
 ];
 
@@ -29,7 +28,7 @@ export function HelpModal({ open, onClose }: { open: boolean; onClose: () => voi
         onClick={(e) => e.stopPropagation()}
       >
         <header className="flex shrink-0 items-center gap-2 border-b border-edge px-4 py-3">
-          <h2 className="text-sm font-semibold text-ink">How to use BundleState</h2>
+          <h2 className="text-sm font-semibold text-ink">How to use</h2>
           <button
             type="button"
             aria-label="Close help"

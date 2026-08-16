@@ -5,7 +5,6 @@ import { clsx } from "clsx";
 import { Badge, btn, btnActive, Spinner } from "@/components/ui";
 import { TreemapTab } from "@/components/treemap-tab";
 import { LineageTab } from "@/components/lineage-tab";
-import { DependenciesTab } from "@/components/dependencies-tab";
 import { InspectorSidebar } from "@/components/inspector-sidebar";
 import type { GraphSelection } from "@/components/dependency-graph";
 import { getVersions, loadReport, saveVersion } from "@/db";
@@ -35,7 +34,6 @@ export function ReportPage() {
   const [tab, setTab] = useState<Tab>("treemap");
   const [treeFilter, setTreeFilter] = useState("");
   const [lineageFilter, setLineageFilter] = useState("");
-  const [depsFilter, setDepsFilter] = useState("");
   const [selection, setSelection] = useState<GraphSelection | null>(null);
   const [checkingVersions, setCheckingVersions] = useState(false);
 
@@ -108,12 +106,6 @@ export function ReportPage() {
     setSelection({ kind: "package", id: fullName });
   };
 
-  const showInGraph = (fullName: string) => {
-    setSelection({ kind: "package", id: fullName });
-    setLineageFilter(fullName);
-    setTab("lineage");
-  };
-
   if (missing) return <Navigate to="/" replace state={{ missingReport: reportId }} />;
 
   if (!report) {
@@ -127,7 +119,6 @@ export function ReportPage() {
   const tabs: { id: Tab; label: string }[] = [
     { id: "treemap", label: "Treemap" },
     { id: "lineage", label: "Lineage" },
-    { id: "dependencies", label: "Dependencies" },
   ];
 
   return (
@@ -184,14 +175,6 @@ export function ReportPage() {
             onNodeClick={(node) => {
               setSelection(node);
             }}
-          />
-        )}
-        {tab === "dependencies" && (
-          <DependenciesTab
-            report={report}
-            filter={depsFilter}
-            onFilter={setDepsFilter}
-            onShowInGraph={showInGraph}
           />
         )}
         <InspectorSidebar

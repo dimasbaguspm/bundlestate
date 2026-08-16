@@ -18,6 +18,18 @@ interface InspectorSidebarProps {
   onClose: () => void;
 }
 
+/** Resolve a package selection id, handling version-qualified ids like `foo@2.0.0`. */
+function findPackageById(report: BundleStateReport, id: string): Package | undefined {
+  const at = id.lastIndexOf("@");
+  if (at !== -1) {
+    const base = id.slice(0, at);
+    const version = id.slice(at + 1);
+    const hit = report.packages.find((p) => p.fullName === base && String(p.version) === version);
+    if (hit) return hit;
+  }
+  return report.packages.find((p) => p.fullName === id);
+}
+
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div className="space-y-0.5 rounded-md border border-edge bg-well px-2 py-1.5">
@@ -171,7 +183,7 @@ export function InspectorSidebar({
   let title = "Inspector";
   let body: React.ReactNode = null;
   if (selection?.kind === "package") {
-    const pkg = report.packages.find((p) => p.fullName === selection.id);
+    const pkg = findPackageById(report, selection.id);
     title = selection.id;
     body = pkg ? (
       <PackageDetails report={report} pkg={pkg} versions={versions} checking={checking} />

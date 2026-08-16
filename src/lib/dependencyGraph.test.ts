@@ -121,6 +121,48 @@ describe("buildPackageGraph", () => {
     // Lockfile-only target becomes a package node so the edge is not dangling.
     expect(data.nodes.map((n) => n.id)).toContain("scheduler");
   });
+
+  it("shows a package that ships multiple versions as separate nodes", () => {
+    const moduleGraph: ModuleGraph = {
+      nodes: [
+        { id: "node_modules/.pnpm/foo@1.0.0/node_modules/foo/index.js", pkg: "foo", version: "1.0.0", local: false },
+        { id: "node_modules/.pnpm/foo@2.0.0/node_modules/foo/index.js", pkg: "foo", version: "2.0.0", local: false },
+        { id: "src/index.ts", local: true },
+      ],
+      edges: [
+        ["src/index.ts", "node_modules/.pnpm/foo@1.0.0/node_modules/foo/index.js"],
+        ["src/index.ts", "node_modules/.pnpm/foo@2.0.0/node_modules/foo/index.js"],
+      ],
+      pkgModules: {
+        foo: [
+          "node_modules/.pnpm/foo@1.0.0/node_modules/foo/index.js",
+          "node_modules/.pnpm/foo@2.0.0/node_modules/foo/index.js",
+        ],
+      },
+      hasContents: true,
+    };
+    const report = makeReport({
+      packages: [
+        { name: "foo", fullName: "foo", version: "1.0.0", source: "pnpm", usedIn: [] },
+        { name: "foo", fullName: "foo", version: "2.0.0", source: "pnpm", usedIn: [] },
+      ],
+      moduleGraph,
+    });
+
+    const data = buildPackageGraph(report);
+
+    const ids = data.nodes.map((n) => n.id);
+    expect(ids).toContain("foo@1.0.0");
+    expect(ids).toContain("foo@2.0.0");
+    expect(ids).not.toContain("foo");
+    // Each version keeps its own edge from the app source.
+    expect(data.edges.some((e) => e.source === "app" && e.target === "foo@1.0.0")).toBe(true);
+    expect(data.edges.some((e) => e.source === "app" && e.target === "foo@2.0.0")).toBe(true);
+    // Node carries the plain name + version so the inspector can resolve it.
+    const node = data.nodes.find((n) => n.id === "foo@1.0.0")!;
+    expect(node.fullName).toBe("foo");
+    expect(node.version).toBe("1.0.0");
+  });
 });
 
 describe("buildModuleSubgraph", () => {

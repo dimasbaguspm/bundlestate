@@ -98,7 +98,7 @@ export function DependencyGraph({ report, onNodeClick, filterQuery }: Dependency
           emphasis: { focus: "adjacency", label: { color: "#0a100c" } },
           symbolSize: (value: number) => 10 + Math.sqrt(Math.max(0, value)) * 3,
           lineStyle: { color: "#3e5648", width: 1.2, opacity: 0.75, curveness: 0.15 },
-          data: nodes.map((n) => ({ id: n.id, name: n.name, value: n.value, category: n.category, pkg: n.pkg })),
+          data: nodes.map((n) => ({ id: n.id, name: n.name, value: n.value, category: n.category, pkg: n.pkg, fullName: n.fullName })),
           links: edges.map((e) => ({
             source: e.source,
             target: e.target,
@@ -110,11 +110,13 @@ export function DependencyGraph({ report, onNodeClick, filterQuery }: Dependency
     });
 
     const onClick = (params: ECElementEvent) => {
-      const data = params.data as { id?: string; category?: string; pkg?: string } | undefined;
+      const data = params.data as { id?: string; category?: string; pkg?: string; fullName?: string } | undefined;
       if (!data?.id) return;
       if (data.category === "package") {
         clickRef.current?.({ kind: "package", id: data.id });
-        if (report.moduleGraph && data.id !== drilledPkg) setDrilledPkg(data.id);
+        // Drill uses the plain package name (pkgModules is keyed by name).
+        const base = data.fullName ?? data.id;
+        if (report.moduleGraph && base !== drilledPkg) setDrilledPkg(base);
       } else if (data.category === "module") {
         clickRef.current?.({ kind: "module", id: data.id, pkg: data.pkg });
       }
