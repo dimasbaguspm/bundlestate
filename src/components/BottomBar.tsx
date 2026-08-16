@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Bookmark, MessageSquareText, Moon, Sun, Tag } from "lucide-react";
+import { Bookmark, CircleHelp, MessageSquareText, Moon, Sun, Tag } from "lucide-react";
 import { useTheme } from "@/hooks/use-theme";
 import { APP_VERSION } from "@/constants/version";
 import { SITE_HOST, SITE_NAME, SITE_URL } from "@/constants/site";
@@ -10,7 +10,13 @@ const FEEDBACK_URL = "https://github.com/dimasbaguspm/bundlestate/issues";
 /** Persistent bottom bar following the syntaxdiff pattern exactly: history
  * entrypoint on the left, site URL in the center, version + theme + feedback
  * on the right. */
-export function BottomBar({ onOpenHistory }: { onOpenHistory: () => void }) {
+export function BottomBar({
+  onOpenHistory,
+  onOpenHelp,
+}: {
+  onOpenHistory: () => void;
+  onOpenHelp: () => void;
+}) {
   const { theme, toggle } = useTheme();
   const [count, setCount] = useState(0);
 
@@ -33,6 +39,15 @@ export function BottomBar({ onOpenHistory }: { onOpenHistory: () => void }) {
     <footer className="relative z-30 shrink-0 border-t border-edge">
       <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 px-3 py-1">
         <div className="flex items-center justify-start gap-0.5">
+          <button
+            type="button"
+            onClick={onOpenHelp}
+            aria-label="How to use"
+            className="flex items-center gap-1.5 rounded px-1.5 py-1 text-dim transition-colors hover:bg-surface-2 hover:text-ink"
+          >
+            <CircleHelp className="size-4" aria-hidden />
+            <span className="hidden text-xs font-medium sm:inline">How to use</span>
+          </button>
           <button
             type="button"
             onClick={openHistory}
