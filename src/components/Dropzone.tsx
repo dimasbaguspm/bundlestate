@@ -45,7 +45,7 @@ export function Dropzone({ onFiles }: DropzoneProps) {
   };
 
   return (
-    <div>
+    <div className="flex min-h-0 w-full flex-1 flex-col gap-2">
       <div
         role="button"
         tabIndex={0}
@@ -61,7 +61,7 @@ export function Dropzone({ onFiles }: DropzoneProps) {
         onDragLeave={() => setDragging(false)}
         onDrop={onDrop}
         className={clsx(
-          "flex cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed px-6 py-14 text-center transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
+          "flex min-h-0 w-full flex-1 cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed px-6 text-center transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
           dragging ? "border-ink bg-surface-2" : "border-edge bg-surface hover:border-ink/40",
         )}
       >
