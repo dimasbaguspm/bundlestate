@@ -98,6 +98,24 @@ describe("normalizeBundle", () => {
     expect(report.insights.unusedDeclaredDeps).toContain("unused-dep");
   });
 
+  it("extracts versions from pnpm virtual-store paths in source maps", async () => {
+    const input = makeInput();
+    input.assets[0].mapSources = [
+      "../../node_modules/.pnpm/@floating-ui+dom@1.8.0/node_modules/@floating-ui/dom/dist/floating-ui.dom.mjs",
+      "../../node_modules/.pnpm/react@18.3.1_react-dom@18.3.1/node_modules/react/index.js",
+    ];
+    const report = await normalizeBundle(input);
+
+    const dom = report.packages.find((p) => p.fullName === "@floating-ui/dom")!;
+    expect(dom).toBeDefined();
+    expect(dom.version).toBe("1.8.0");
+    expect(dom.source).toBe("pnpm");
+
+    const react = report.packages.find((p) => p.fullName === "react")!;
+    expect(react.version).toBe("18.3.1"); // peer-dependency suffix stripped
+    expect(react.source).toBe("pnpm");
+  });
+
   it("tolerates missing maps, lockfile and package.json", async () => {
     const report = await normalizeBundle({
       sourceName: "bare.zip",

@@ -1,4 +1,3 @@
-import { detectBundler } from "./autodetect";
 import { computeInsights } from "./insights";
 import { detectLockfileEntry, parseLockfile, type LockPkg } from "./lockfile";
 import { resolvePackageFromPath } from "./resolver";
@@ -54,12 +53,7 @@ export async function normalizeBundle(input: NormalizeInput): Promise<BundleStat
     })),
   );
 
-  const bundler = detectBundler([
-    ...entries.map((e) => e.name),
-    ...rawAssets.flatMap((a) => a.mapSources ?? []),
-  ]);
-
-  const packages = aggregatePackages(assets, bundler);
+  const packages = aggregatePackages(rawAssets, assets);
 
   const declaredDeps = readDeclaredDeps(entries);
   const lockfileEntry = detectLockfileEntry(entries.map((e) => e.name));
@@ -111,21 +105,27 @@ export async function normalizeBundle(input: NormalizeInput): Promise<BundleStat
   return report;
 }
 
-function aggregatePackages(assets: Asset[], bundler: ReturnType<typeof detectBundler>): Package[] {
+function aggregatePackages(rawAssets: RawAsset[], assets: Asset[]): Package[] {
   const byFullName = new Map<string, Package>();
-  for (const asset of assets) {
-    for (const fullName of asset.usedModules) {
-      let pkg = byFullName.get(fullName);
+  // Walk the RAW source-map paths (not the pre-resolved usedModules): module
+  // paths carry the package identity AND the pnpm virtual-store version.
+  for (let i = 0; i < assets.length; i++) {
+    const asset = assets[i];
+    const raw = rawAssets[i];
+    for (const source of raw.mapSources ?? []) {
+      const resolved = resolvePackageFromPath(source);
+      if (!resolved) continue;
+      let pkg = byFullName.get(resolved.fullName);
       if (!pkg) {
-        const resolved = resolvePackageFromPath(fullName);
         pkg = {
-          name: resolved?.name ?? fullName,
-          scope: resolved?.scope,
-          fullName,
-          source: bundler,
+          name: resolved.name,
+          scope: resolved.scope,
+          fullName: resolved.fullName,
+          version: resolved.version,
+          source: resolved.source,
           usedIn: [],
         };
-        byFullName.set(fullName, pkg);
+        byFullName.set(resolved.fullName, pkg);
       }
       if (!pkg.usedIn.includes(asset.name)) pkg.usedIn.push(asset.name);
     }
