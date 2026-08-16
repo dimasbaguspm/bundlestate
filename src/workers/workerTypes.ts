@@ -1,5 +1,5 @@
 import type { Remote } from "comlink";
-import type { BundleStateReport } from "../lib/types";
+import type { BundleStateReport } from "@/lib/types";
 
 /**
  * Progress snapshot returned by `getProgress`. Workers report progress via

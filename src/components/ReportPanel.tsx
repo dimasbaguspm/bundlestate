@@ -1,6 +1,6 @@
 import { AlertTriangle, FileArchive, Layers } from "lucide-react";
-import { formatBytes } from "../lib/format";
-import type { BundleStateReport } from "../lib/types";
+import { formatBytes } from "@/lib/format";
+import type { BundleStateReport } from "@/lib/types";
 import { Badge, Card } from "./ui";
 import { Treemap } from "./Treemap";
 

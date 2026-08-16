@@ -1,10 +1,10 @@
 import { useShallow } from "zustand/react/shallow";
-import { Dropzone } from "./components/Dropzone";
-import { JobsPanel } from "./components/JobsPanel";
-import { ReportPanel } from "./components/ReportPanel";
-import { Shell } from "./components/Shell";
-import { useBundleStore } from "./state/store";
-import { runParseJob } from "./state/runJob";
+import { Dropzone } from "@/components/Dropzone";
+import { JobsPanel } from "@/components/JobsPanel";
+import { ReportPanel } from "@/components/ReportPanel";
+import { Shell } from "@/components/Shell";
+import { useBundleStore } from "@/state/store";
+import { runParseJob } from "@/state/runJob";
 
 export default function App() {
   const jobs = useBundleStore(useShallow((state) => Object.values(state.jobs)));

@@ -1,6 +1,6 @@
 import { proxy, type Remote } from "comlink";
-import { AppWorkerPool } from "../AppWorkerPool";
-import type { AbortHandle } from "../workers/workerTypes";
+import { AppWorkerPool } from "@/AppWorkerPool";
+import type { AbortHandle } from "@/workers/workerTypes";
 import { useBundleStore } from "./store";
 
 let pool: AppWorkerPool | null = null;

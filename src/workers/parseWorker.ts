@@ -1,8 +1,8 @@
 import { expose, wrap, type Remote } from "comlink";
-import { collectAssets } from "../lib/parseAssets";
-import { extractZip } from "../lib/zip";
-import type { NormalizeInput } from "../lib/normalize";
-import type { BundleStateReport } from "../lib/types";
+import { collectAssets } from "@/lib/parseAssets";
+import { extractZip } from "@/lib/zip";
+import type { NormalizeInput } from "@/lib/normalize";
+import type { BundleStateReport } from "@/lib/types";
 import { Normalizer } from "./normalizeSubWorker";
 import type {
   AbortHandle,

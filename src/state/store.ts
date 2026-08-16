@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { BundleStateReport } from "../lib/types";
+import type { BundleStateReport } from "@/lib/types";
 
 export type JobStatus = "pending" | "extracting" | "normalizing" | "done" | "error" | "aborted";
 

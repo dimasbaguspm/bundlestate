@@ -1,7 +1,7 @@
 import * as echarts from "echarts";
 import { useEffect, useRef } from "react";
-import type { BundleStateReport } from "../lib/types";
-import { buildTreemap } from "../lib/treemap";
+import type { BundleStateReport } from "@/lib/types";
+import { buildTreemap } from "@/lib/treemap";
 
 const PALETTE = ["#142117", "#1d2f22", "#27402c", "#335337", "#416544", "#e2b85c", "#c9a84c"];
 

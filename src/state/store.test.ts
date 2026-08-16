@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { useBundleStore } from "./store";
-import type { BundleStateReport } from "../lib/types";
+import type { BundleStateReport } from "@/lib/types";
 
 function makeReport(id: string): BundleStateReport {
   return {

@@ -1,7 +1,7 @@
 import { CheckCircle2, Loader2, OctagonX, XCircle } from "lucide-react";
 import { clsx } from "clsx";
-import type { Job } from "../state/store";
-import { abortJob } from "../state/runJob";
+import type { Job } from "@/state/store";
+import { abortJob } from "@/state/runJob";
 import { Badge, Button, Card } from "./ui";
 
 const statusLabel: Record<Job["status"], string> = {

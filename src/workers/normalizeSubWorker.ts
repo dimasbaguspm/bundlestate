@@ -1,6 +1,6 @@
 import { expose } from "comlink";
-import { normalizeBundle, type NormalizeInput } from "../lib/normalize";
-import type { BundleStateReport } from "../lib/types";
+import { normalizeBundle, type NormalizeInput } from "@/lib/normalize";
+import type { BundleStateReport } from "@/lib/types";
 import type { NormalizerService } from "./workerTypes";
 
 /**
