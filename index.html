@@ -1,14 +1,65 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <meta charset="UTF-8" />
+    <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="color-scheme" content="dark" />
+    <title>BundleState | Know what your bundle actually ships</title>
     <meta
       name="description"
-      content="BundleState — 100% client-side bundle diagnostics. Drop a zip of your built JS bundle with source maps to see what your app really ships."
+      content="Universal, zero-config, client-side diagnostics for JS/TS application bundles. Drag in a build zip with source maps and see exactly which packages (incl. transitive deps) your app ships. Nothing leaves your browser."
     />
-    <title>BundleState</title>
+    <meta name="author" content="Dimas Bagus P (dimasbaguspm)" />
+    <meta name="robots" content="index, follow" />
+    <meta name="theme-color" content="#131d17" />
+    <link rel="canonical" href="https://bundlestate.dimasbaguspm.dev/" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="BundleState" />
+    <meta property="og:title" content="BundleState | Know what your bundle actually ships" />
+    <meta
+      property="og:description"
+      content="Drag a build zip with source maps into your browser and BundleState maps out which packages your app really ships — including deps of deps — while flagging bloat and version drift. 100% client-side."
+    />
+    <meta property="og:url" content="https://bundlestate.dimasbaguspm.dev/" />
+    <meta property="og:image" content="https://bundlestate.dimasbaguspm.dev/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta
+      property="og:image:alt"
+      content="BundleState, a privacy-first, client-side bundle diagnostics dashboard"
+    />
+    <meta property="og:locale" content="en_US" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="BundleState | Know what your bundle actually ships" />
+    <meta
+      name="twitter:description"
+      content="Drag a build zip with source maps and see exactly which packages your app ships. 100% client-side, nothing leaves the browser."
+    />
+    <meta name="twitter:image" content="https://bundlestate.dimasbaguspm.dev/og-image.png" />
+
+    <!-- Structured data (Google Rich Results + AI agents) -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "BundleState",
+        "applicationCategory": "DeveloperApplication",
+        "operatingSystem": "Any",
+        "url": "https://bundlestate.dimasbaguspm.dev/",
+        "slogan": "Know what your bundle actually ships.",
+        "description": "Drag a build zip with source maps into your browser and BundleState maps which packages your app really ships, including transitive deps, flagging bloat and version drift. 100% client-side, zero data exfiltration.",
+        "featureList": "Drag-and-drop zip analysis; source-map powered package graph; dependency-of-dependency awareness; pnpm lockfile version drift; gzip sizes; ECharts treemap; Web Worker pipeline",
+        "author": {
+          "@type": "Person",
+          "name": "Dimas Bagus P",
+          "url": "https://github.com/dimasbaguspm"
+        },
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
