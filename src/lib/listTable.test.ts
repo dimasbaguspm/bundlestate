@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildLineageTable } from "./lineageTable";
+import { buildListTable } from "./listTable";
 import type { BundleStateReport, ModuleGraph } from "./types";
 
 function reportWith(edges: ModuleGraph["edges"]): BundleStateReport {
@@ -38,7 +38,7 @@ function reportWith(edges: ModuleGraph["edges"]): BundleStateReport {
   };
 }
 
-describe("buildLineageTable", () => {
+describe("buildListTable", () => {
   // app -> foo -> bar -> baz
   const report = reportWith([
     ["src/index.ts", "node_modules/.pnpm/foo@1.0.0/node_modules/foo/index.js"],
@@ -47,13 +47,13 @@ describe("buildLineageTable", () => {
   ]);
 
   it("lists packages sorted by transitive dependant count", () => {
-    const rows = buildLineageTable(report);
+    const rows = buildListTable(report);
     expect(rows.map((r) => r.fullName)).toEqual(["baz", "bar", "foo"]);
     expect(rows.map((r) => r.usedByCount)).toEqual([3, 2, 1]);
   });
 
   it("shows the expandable dependant chain up to app", () => {
-    const rows = buildLineageTable(report);
+    const rows = buildListTable(report);
     // baz: bar -> foo -> app
     const baz = rows.find((r) => r.fullName === "baz")!;
     expect(baz.children.map((c) => c.fullName)).toEqual(["bar"]);
@@ -66,7 +66,7 @@ describe("buildLineageTable", () => {
   });
 
   it("filters rows by package name", () => {
-    const rows = buildLineageTable(report, "ba");
+    const rows = buildListTable(report, "ba");
     expect(rows.map((r) => r.fullName)).toEqual(["baz", "bar"]);
   });
 });

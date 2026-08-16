@@ -21,8 +21,27 @@ export interface BundleStateReport {
   graph: DependencyGraph;
   /** Module-level import graph (present when maps carried sourcesContent). */
   moduleGraph?: ModuleGraph;
+  /** Non-JS/HTML assets shipped by the bundle (images, fonts, json, css…). */
+  files?: StaticFile[];
   insights: Insights;
 }
+
+/** Non-JS/HTML asset shipped by the bundle. */
+export interface StaticFile {
+  path: string;
+  sizeBytes: number;
+  type: StaticFileType;
+}
+
+export type StaticFileType =
+  | "image"
+  | "font"
+  | "video"
+  | "audio"
+  | "json"
+  | "css"
+  | "text"
+  | "other";
 
 /** A built JS asset shipped by the bundle. */
 export interface Asset {

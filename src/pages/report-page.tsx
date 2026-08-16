@@ -1,21 +1,24 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Navigate, useParams } from "react-router-dom";
 import { FileArchive } from "lucide-react";
 import { clsx } from "clsx";
-import { Badge, btn, btnActive, Spinner } from "@/components/ui";
+import { Badge, btn, btnActive, CopyButton, Spinner } from "@/components/ui";
 import { TreemapTab } from "@/components/treemap-tab";
-import { LineageTableTab } from "@/components/lineage-table-tab";
+import { ListTableTab } from "@/components/list-table-tab";
+import { FilesTab } from "@/components/files-tab";
 import { loadReport } from "@/db";
+import { buildMarkdownReport } from "@/lib/reportMarkdown";
 import { useBundleStore } from "@/state/store";
 import type { BundleStateReport } from "@/lib/types";
 
-type Tab = "treemap" | "lineage";
+type Tab = "treemap" | "list" | "files";
 
 /**
  * Detail page at `/r/:reportId`. Prefers the in-memory zustand copy (fresh
  * analysis) and falls back to IndexedDB so a refresh shows the same report.
- * Unknown ids redirect home with a banner. Header holds two tabs —
- * Treemap / Lineage — each full width/height with its own filter.
+ * Unknown ids redirect home with a banner. Header holds three tabs —
+ * Treemap / List / Files — each full width/height with its own filter, plus
+ * a Copy button that generates a PR-ready Markdown report.
  */
 export function ReportPage() {
   const { id } = useParams<{ id: string }>();
@@ -25,7 +28,8 @@ export function ReportPage() {
   const [missing, setMissing] = useState(false);
   const [tab, setTab] = useState<Tab>("treemap");
   const [treemapFilter, setTreemapFilter] = useState("");
-  const [lineageFilter, setLineageFilter] = useState("");
+  const [listFilter, setListFilter] = useState("");
+  const [filesFilter, setFilesFilter] = useState("");
 
   // Resolve the report: store copy first, then IndexedDB.
   useEffect(() => {
@@ -50,6 +54,8 @@ export function ReportPage() {
     if (report) useBundleStore.getState().setActiveReport(report.id);
   }, [report]);
 
+  const markdown = useMemo(() => (report ? buildMarkdownReport(report) : ""), [report]);
+
   if (missing) return <Navigate to="/" replace state={{ missingReport: reportId }} />;
 
   if (!report) {
@@ -62,7 +68,8 @@ export function ReportPage() {
 
   const tabs: { id: Tab; label: string }[] = [
     { id: "treemap", label: "Treemap" },
-    { id: "lineage", label: "Lineage" },
+    { id: "list", label: "List" },
+    { id: "files", label: "Files" },
   ];
 
   return (
@@ -80,6 +87,7 @@ export function ReportPage() {
             : `gzip ${(report.insights.gzipRatio * 100).toFixed(1)}%`}
         </Badge>
         <div className="ml-auto flex items-center gap-2">
+          <CopyButton value={markdown} label="Copy report" className="px-2.5 py-1 text-xs" />
           <div
             role="tablist"
             aria-label="Report views"
@@ -103,18 +111,13 @@ export function ReportPage() {
 
       <div className="relative flex min-h-0 flex-1 flex-col">
         {tab === "treemap" && (
-          <TreemapTab
-            report={report}
-            filter={treemapFilter}
-            onFilter={setTreemapFilter}
-          />
+          <TreemapTab report={report} filter={treemapFilter} onFilter={setTreemapFilter} />
         )}
-        {tab === "lineage" && (
-          <LineageTableTab
-            report={report}
-            filter={lineageFilter}
-            onFilter={setLineageFilter}
-          />
+        {tab === "list" && (
+          <ListTableTab report={report} filter={listFilter} onFilter={setListFilter} />
+        )}
+        {tab === "files" && (
+          <FilesTab report={report} filter={filesFilter} onFilter={setFilesFilter} />
         )}
       </div>
     </div>

@@ -14,7 +14,7 @@ Universal, zero-config, client-side **bundle diagnostics** for JavaScript and Ty
 - **Source-map powered** — reads inline or sidecar `.map` files to recover the true module graph.
 - **Dependency awareness** — every package your app ships, including transitive deps, resolved from real module paths.
 - **Version drift** — versions extracted from pnpm virtual-store paths and lockfiles, so you see what actually shipped vs what was declared.
-- **Two views** — a responsive **Treemap** (bigger package = bigger area) and **Lineage**, an expandable table showing who depends on each package, with version clashes split per version (`foo@1.0.0`, `foo@2.0.0`). Each view has a live filter.
+- **Three views** — a responsive **Treemap** (bigger package = bigger area, grouped by file), a **List** of packages with their sizes and dependants, and a **Files** view of static assets (images, fonts, css, json). Each has a live filter, and a **Copy report** button generates a PR-ready Markdown summary.
 - **Bloat flags** — gzip sizes per asset and an insights engine that flags unused declared deps and oversized chunks.
 - **Privacy-first** — every byte is processed in Web Workers inside your browser. No backend, no analytics, no data exfiltration.
 

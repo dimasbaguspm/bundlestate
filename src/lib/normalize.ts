@@ -1,6 +1,7 @@
 import { computeInsights } from "./insights";
 import { detectLockfileEntry, parseLockfile, type LockPkg } from "./lockfile";
 import { extractModuleGraph } from "./modulegraph";
+import { collectStaticFiles } from "./files";
 import { resolvePackageFromPath } from "./resolver";
 import { usedModulesFromSources } from "./sourcemap";
 import type { Asset, BundleStateReport, DeclaredDeps, DependencyGraph, Package } from "./types";
@@ -108,6 +109,7 @@ export async function normalizeBundle(input: NormalizeInput): Promise<BundleStat
     },
     graph,
     moduleGraph,
+    files: collectStaticFiles(entries),
     insights: computeInsights({ assets, packages, declaredDeps, rawMapSources, moduleGraph }),
   };
 

@@ -2,19 +2,19 @@ import type { BundleStateReport } from "./types";
 import { buildPackageGraph } from "./dependencyGraph";
 
 /** One node in the reverse-dependency tree (a dependant of its parent). */
-export interface LineageTreeNode {
+export interface ListTreeNode {
   fullName: string;
   version?: string;
   isApp?: boolean;
-  children: LineageTreeNode[];
+  children: ListTreeNode[];
 }
 
 /** A top-level package row with its expandable dependant tree. */
-export interface LineageTableRow {
+export interface ListTableRow {
   fullName: string;
   version?: string;
   usedByCount: number;
-  children: LineageTreeNode[];
+  children: ListTreeNode[];
 }
 
 export const APP_NODE = "app";
@@ -26,7 +26,7 @@ export const APP_NODE = "app";
  * package shows who uses it, transitively (e.g. `baz` → `bar` → `foo` → `app`).
  * Cycle-safe via a visited set. Rows sort by dependant count descending.
  */
-export function buildLineageTable(report: BundleStateReport, query = ""): LineageTableRow[] {
+export function buildListTable(report: BundleStateReport, query = ""): ListTableRow[] {
   const versionOf = new Map(report.packages.map((p) => [p.fullName, p.version]));
   const reverse = new Map<string, Set<string>>();
   for (const edge of buildPackageGraph(report).edges) {
@@ -35,7 +35,7 @@ export function buildLineageTable(report: BundleStateReport, query = ""): Lineag
   }
   const dependantsOf = (name: string): string[] => [...(reverse.get(name) ?? [])].sort();
 
-  const buildNode = (name: string, visited: Set<string>): LineageTreeNode => {
+  const buildNode = (name: string, visited: Set<string>): ListTreeNode => {
     const next = new Set(visited);
     next.add(name);
     const children = dependantsOf(name)
@@ -68,6 +68,6 @@ export function buildLineageTable(report: BundleStateReport, query = ""): Lineag
 }
 
 /** Total nodes in a dependant tree (direct + transitive, up to app). */
-function countNodes(nodes: LineageTreeNode[]): number {
+function countNodes(nodes: ListTreeNode[]): number {
   return nodes.reduce((sum, n) => sum + 1 + countNodes(n.children), 0);
 }
