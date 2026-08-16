@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { clsx } from "clsx";
-import { Check, Copy } from "lucide-react";
+import { Check, Copy, Search } from "lucide-react";
 import type { ButtonHTMLAttributes, HTMLAttributes, ReactNode } from "react";
 
 /** Shared UI class constants — mirrors the syntaxdiff design system. */
@@ -19,6 +19,33 @@ export const inputCls =
 export function Spinner() {
   return (
     <span className="inline-block size-4 animate-spin rounded-full border-2 border-edge border-t-accent" />
+  );
+}
+
+/** Compact search input used by each report tab to filter its view. */
+export function FilterInput({
+  value,
+  onChange,
+  placeholder,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  placeholder: string;
+}) {
+  return (
+    <label className="relative block w-full">
+      <Search
+        className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-faint"
+        aria-hidden
+      />
+      <input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        aria-label={placeholder}
+        className="w-full rounded-lg border border-edge bg-well py-1.5 pr-3 pl-8 text-sm text-ink placeholder-faint focus:border-accent/60 focus:outline-none focus:ring-2 focus:ring-accent/20"
+      />
+    </label>
   );
 }
 

@@ -3,7 +3,7 @@ import type { ECElementEvent } from "echarts";
 import { useEffect, useMemo, useRef } from "react";
 import { clsx } from "clsx";
 import type { BundleStateReport } from "@/lib/types";
-import { buildTreemap, highlightNode } from "@/lib/treemap";
+import { buildTreemap, filterTreemap, highlightNode } from "@/lib/treemap";
 
 const PALETTE = ["#142117", "#1d2f22", "#27402c", "#335337", "#416544", "#e2b85c", "#c9a84c"];
 
@@ -13,6 +13,8 @@ interface TreemapProps {
   onNodeClick?: (fullName: string) => void;
   /** Package highlighted while its inspector is open. */
   selectedFullName?: string | null;
+  /** Keep only package leaves whose name matches (case-insensitive). */
+  filterQuery?: string;
   className?: string;
 }
 
@@ -22,7 +24,13 @@ interface TreemapProps {
  * Package leaves are clickable (inspector wiring); the selected package is
  * highlighted gold via a fresh data tree.
  */
-export function Treemap({ report, onNodeClick, selectedFullName, className }: TreemapProps) {
+export function Treemap({
+  report,
+  onNodeClick,
+  selectedFullName,
+  filterQuery,
+  className,
+}: TreemapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const clickRef = useRef(onNodeClick);
   clickRef.current = onNodeClick;
@@ -37,7 +45,8 @@ export function Treemap({ report, onNodeClick, selectedFullName, className }: Tr
     if (!el) return;
     const chart = echarts.init(el);
 
-    const data = selectedFullName ? highlightNode(buildTreemap(report), selectedFullName) : buildTreemap(report);
+    const base = filterQuery ? filterTreemap(buildTreemap(report), filterQuery) : buildTreemap(report);
+    const data = selectedFullName ? highlightNode(base, selectedFullName) : base;
 
     chart.setOption({
       backgroundColor: "transparent",
@@ -48,7 +57,7 @@ export function Treemap({ report, onNodeClick, selectedFullName, className }: Tr
       series: [
         {
           type: "treemap",
-          roam: false,
+          roam: true,
           nodeClick: false,
           breadcrumb: { show: true, itemStyle: { color: "#142117", borderColor: "#1d2f22" } },
           label: {
@@ -83,7 +92,7 @@ export function Treemap({ report, onNodeClick, selectedFullName, className }: Tr
       observer.disconnect();
       chart.dispose();
     };
-  }, [report, selectedFullName, packageNames]);
+  }, [report, selectedFullName, packageNames, filterQuery]);
 
   return (
     <div

@@ -45,3 +45,24 @@ export function highlightNode(nodes: TreemapNode[], fullName: string): TreemapNo
     return next;
   });
 }
+
+/**
+ * Keep only branches whose package leaves match `query` (case-insensitive
+ * substring). Asset parents with no matching package child are dropped.
+ * An empty query returns the tree unchanged.
+ */
+export function filterTreemap(nodes: TreemapNode[], query: string): TreemapNode[] {
+  const q = query.trim().toLowerCase();
+  if (!q) return nodes;
+  const keep = (node: TreemapNode): TreemapNode | null => {
+    if (node.children) {
+      const children = node.children
+        .map(keep)
+        .filter((c): c is TreemapNode => c !== null);
+      if (children.length === 0) return null;
+      return { ...node, children };
+    }
+    return node.name.toLowerCase().includes(q) ? node : null;
+  };
+  return nodes.map(keep).filter((n): n is TreemapNode => n !== null);
+}

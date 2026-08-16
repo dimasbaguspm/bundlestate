@@ -14,6 +14,8 @@ interface DependencyGraphProps {
   report: BundleStateReport;
   /** Fired for every package or module node click. */
   onNodeClick: (selection: GraphSelection) => void;
+  /** When set, isolate nodes whose name matches plus their direct neighbours. */
+  filterQuery?: string;
 }
 
 const CATEGORIES = [
@@ -28,13 +30,31 @@ const CATEGORIES = [
  * into an "app source" node; lockfile edges as fallback), drilling into a
  * package's own module subgraph on package click.
  */
-export function DependencyGraph({ report, onNodeClick }: DependencyGraphProps) {
+export function DependencyGraph({ report, onNodeClick, filterQuery }: DependencyGraphProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [drilledPkg, setDrilledPkg] = useState<string | null>(null);
   const clickRef = useRef(onNodeClick);
   clickRef.current = onNodeClick;
 
   const packageData = useMemo(() => buildPackageGraph(report), [report]);
+  const visible = useMemo(() => {
+    const q = filterQuery?.trim().toLowerCase();
+    if (!q) return packageData;
+    const matched = new Set(
+      packageData.nodes.filter((n) => n.name.toLowerCase().includes(q)).map((n) => n.id),
+    );
+    if (matched.size === 0) return { ...packageData, nodes: [], edges: [] };
+    const keep = new Set(matched);
+    for (const e of packageData.edges) {
+      if (matched.has(e.source)) keep.add(e.target);
+      if (matched.has(e.target)) keep.add(e.source);
+    }
+    return {
+      ...packageData,
+      nodes: packageData.nodes.filter((n) => keep.has(n.id)),
+      edges: packageData.edges.filter((e) => keep.has(e.source) && keep.has(e.target)),
+    };
+  }, [packageData, filterQuery]);
   const subgraph = useMemo(
     () => (drilledPkg ? buildModuleSubgraph(report, drilledPkg) : null),
     [report, drilledPkg],
@@ -43,8 +63,8 @@ export function DependencyGraph({ report, onNodeClick }: DependencyGraphProps) {
   // A drilled package with no module graph keeps the package view.
   const effective = drilledPkg && subgraph ? subgraph : null;
   const hasModuleData = effective ? true : packageData.hasModuleData;
-  const nodes = effective?.nodes ?? packageData.nodes;
-  const edges = effective?.edges ?? packageData.edges;
+  const nodes = effective?.nodes ?? visible.nodes;
+  const edges = effective?.edges ?? visible.edges;
   const notice =
     !hasModuleData
       ? "No source content in the source maps — showing lockfile edges at package level only."
@@ -108,7 +128,7 @@ export function DependencyGraph({ report, onNodeClick }: DependencyGraphProps) {
       observer.disconnect();
       chart.dispose();
     };
-  }, [nodes, edges, report, drilledPkg]);
+  }, [nodes, edges, report, drilledPkg, filterQuery]);
 
   return (
     <div className="relative h-full w-full min-h-0" data-testid="dependency-graph">
