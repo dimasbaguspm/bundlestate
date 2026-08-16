@@ -1,0 +1,47 @@
+@import "tailwindcss";
+
+/* ---------------------------------------------------------------------------
+ * BundleState theme — dark-green base + gold ink (dimasbaguspm design system)
+ * ------------------------------------------------------------------------- */
+
+:root {
+  --bg: #0a100c;
+  --surface: #0f1811;
+  --surface-2: #142117;
+  --line: #1d2f22;
+  --ink: #e2b85c;
+  --ink-dim: #b9923f;
+  --text: #dbe7dc;
+  --text-muted: #7d9c85;
+  --accent: #e2b85c;
+  --accent-strong: #eecd85;
+  --danger: #e2725f;
+  --ok: #6fc98a;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-line: var(--line);
+  --color-ink: var(--ink);
+  --color-ink-dim: var(--ink-dim);
+  --color-text: var(--text);
+  --color-muted: var(--text-muted);
+  --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
+  --color-danger: var(--danger);
+  --color-ok: var(--ok);
+
+  --font-sans: ui-sans-serif, system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "SFMono-Regular", "Cascadia Code", "Liberation Mono", Menlo, monospace;
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+  }
+  body {
+    @apply bg-bg font-sans text-text antialiased;
+  }
+}
