@@ -10,9 +10,15 @@ function getPool(): AppWorkerPool {
   return pool;
 }
 
+const POLL_INTERVAL_MS = 120;
+
 /**
  * Run the full parse → normalize pipeline for one dropped zip, streaming
  * progress into the zustand store and honouring the job's abort controller.
+ *
+ * Progress is POLLED, never pushed: comlink proxies cannot forward function
+ * arguments through the nested parse→normalize worker tunnel, so no
+ * callback ever crosses a worker boundary (see workers/workerTypes.ts).
  */
 export async function runParseJob(file: File, jobId: string): Promise<void> {
   const { updateJob, setJobAbort, addReport } = useBundleStore.getState();
@@ -23,22 +29,25 @@ export async function runParseJob(file: File, jobId: string): Promise<void> {
   try {
     updateJob(jobId, { status: "extracting", progress: 0 });
 
-    const onExtract = (fraction: number) => {
-      updateJob(jobId, { status: "extracting", progress: fraction });
-    };
     const abortHandle: AbortHandle = { isAborted: () => abort.signal.aborted };
-    const normalizer = await worker.parseZip(
+    const reportId = await worker.parseZip(
       file,
-      proxy(onExtract),
       // Comlink proxies are structurally different from their Remote type.
       proxy(abortHandle) as unknown as Remote<AbortHandle>,
     );
 
+    // Poll until the normalizer is prepared (extraction + prep in worker).
+    for (;;) {
+      const progress = await worker.getProgress(reportId);
+      if (progress.error) throw new Error(progress.error);
+      if (progress.phase === "done") break;
+      updateJob(jobId, { status: "extracting", progress: progress.fraction });
+      if (abort.signal.aborted) throw new DOMException("Aborted", "AbortError");
+      await sleep(POLL_INTERVAL_MS);
+    }
+
     updateJob(jobId, { status: "normalizing", progress: 0.5 });
-    const onNormalize = (fraction: number) => {
-      updateJob(jobId, { status: "normalizing", progress: 0.5 + fraction * 0.5 });
-    };
-    const report = await normalizer.normalize(proxy(onNormalize));
+    const report = await worker.normalize(reportId);
 
     addReport(report);
     updateJob(jobId, { status: "done", progress: 1, reportId: report.id });
@@ -55,6 +64,10 @@ export async function runParseJob(file: File, jobId: string): Promise<void> {
 
 export function abortJob(jobId: string): void {
   useBundleStore.getState().jobs[jobId]?.abort?.abort();
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function errorMessage(error: unknown): string {
