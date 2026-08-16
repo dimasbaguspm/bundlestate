@@ -1,5 +1,6 @@
 import { proxy, type Remote } from "comlink";
 import { AppWorkerPool } from "@/AppWorkerPool";
+import { saveReport } from "@/db";
 import type { AbortHandle } from "@/workers/workerTypes";
 import { useBundleStore } from "./store";
 
@@ -13,14 +14,18 @@ function getPool(): AppWorkerPool {
 const POLL_INTERVAL_MS = 120;
 
 /**
- * Run the full parse → normalize pipeline for one dropped zip, streaming
+ * Run the full parse → normalize pipeline for one dropped archive, streaming
  * progress into the zustand store and honouring the job's abort controller.
  *
  * Progress is POLLED, never pushed: comlink proxies cannot forward function
  * arguments through the nested parse→normalize worker tunnel, so no
  * callback ever crosses a worker boundary (see workers/workerTypes.ts).
  */
-export async function runParseJob(file: File, jobId: string): Promise<void> {
+export async function runParseJob(
+  file: File,
+  jobId: string,
+  options: { onDone?: (reportId: string) => void } = {},
+): Promise<void> {
   const { updateJob, setJobAbort, addReport } = useBundleStore.getState();
   const abort = new AbortController();
   setJobAbort(jobId, abort);
@@ -50,7 +55,9 @@ export async function runParseJob(file: File, jobId: string): Promise<void> {
     const report = await worker.normalize(reportId);
 
     addReport(report);
+    await saveReport(report);
     updateJob(jobId, { status: "done", progress: 1, reportId: report.id });
+    options.onDone?.(report.id);
   } catch (error) {
     if (abort.signal.aborted) {
       updateJob(jobId, { status: "aborted" });
