@@ -19,6 +19,8 @@ export interface BundleStateReport {
   declaredDeps: DeclaredDeps;
   lockfile: LockfileInfo;
   graph: DependencyGraph;
+  /** Module-level import graph (present when maps carried sourcesContent). */
+  moduleGraph?: ModuleGraph;
   insights: Insights;
 }
 
@@ -66,7 +68,42 @@ export interface DependencyGraph {
   pkgToSubPkg: Record<string, string[]>;
 }
 
-/** Skeleton insight flags — extend in later iterations. */
+/** One module (source file) recovered from a source map. */
+export interface ModuleNode {
+  /** Canonical module id — the full source path. */
+  id: string;
+  /** Owning package fullName when the module lives under node_modules. */
+  pkg?: string;
+  /** Package version when known (pnpm virtual-store paths). */
+  version?: string;
+  /** Module is application code (outside node_modules). */
+  local: boolean;
+}
+
+/** A directed import edge between two module ids. */
+export type ImportEdge = [from: string, to: string];
+
+/**
+ * Module-level import graph extracted from `sourcesContent` in the workers.
+ * `pkgModules` maps a package fullName to its module ids. May be absent
+ * from the report when the maps carried no source content.
+ */
+export interface ModuleGraph {
+  nodes: ModuleNode[];
+  /** Deduplicated directed import edges. */
+  edges: ImportEdge[];
+  pkgModules: Record<string, string[]>;
+  /** True when any map carried `sourcesContent`. */
+  hasContents: boolean;
+}
+
+/** Same package bundled in more than one version. */
+export interface VersionClash {
+  fullName: string;
+  /** Each distinct bundled version + the parent packages that import it. */
+  versions: { version: string; importedBy: string[] }[];
+}
+
 export interface Insights {
   /** Declared dependencies not found in any asset's source maps. */
   unusedDeclaredDeps: string[];
@@ -76,4 +113,11 @@ export interface Insights {
   largestAssets: string[];
   totalSizeBytes: number;
   totalGzipBytes: number | null;
+  /** Duplicate-version packages (uuid@3 alongside uuid@8 etc.). */
+  versionClashes: VersionClash[];
+  /** Module-level import cycles among local source files (each = cycle members). */
+  circularDepGroups: string[][];
+  circularDepCount: number;
+  /** Lineage availability: module graph stats or why it is missing. */
+  lineage: { available: boolean; nodes: number; edges: number; reason?: string };
 }

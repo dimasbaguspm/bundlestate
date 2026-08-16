@@ -2,6 +2,8 @@ import { resolvePackageFromPath } from "./resolver";
 
 export interface SourceMapFile {
   sources: string[];
+  /** Original source text per `sources` entry, when the map carries it. */
+  contents: (string | undefined)[];
 }
 
 /**
@@ -68,9 +70,13 @@ export function parseSourceMap(json: string): SourceMapFile {
     const sources = Array.isArray(parsed?.sources)
       ? parsed.sources.filter((s): s is string => typeof s === "string")
       : [];
-    return { sources };
+    const rawContents = Array.isArray(parsed?.contents) ? parsed.contents : [];
+    const contents: (string | undefined)[] = sources.map((_, i) =>
+      typeof rawContents[i] === "string" ? rawContents[i] : undefined,
+    );
+    return { sources, contents };
   } catch {
-    return { sources: [] };
+    return { sources: [], contents: [] };
   }
 }
 

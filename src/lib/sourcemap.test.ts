@@ -77,15 +77,16 @@ describe("parseSourceMap", () => {
   it("parses a map with sources", () => {
     expect(parseSourceMap(JSON.stringify({ version: 3, sources: ["a.js", "b.js"] }))).toEqual({
       sources: ["a.js", "b.js"],
+      contents: [undefined, undefined],
     });
   });
 
   it("tolerates invalid JSON", () => {
-    expect(parseSourceMap("not json")).toEqual({ sources: [] });
+    expect(parseSourceMap("not json")).toEqual({ sources: [], contents: [] });
   });
 
   it("defaults missing sources to an empty array", () => {
-    expect(parseSourceMap(JSON.stringify({ version: 3 }))).toEqual({ sources: [] });
+    expect(parseSourceMap(JSON.stringify({ version: 3 }))).toEqual({ sources: [], contents: [] });
   });
 });
 
