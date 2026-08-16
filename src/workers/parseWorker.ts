@@ -3,7 +3,10 @@ import { collectAssets } from "@/lib/parseAssets";
 import { extractArchive } from "@/lib/zip";
 import type { NormalizeInput } from "@/lib/normalize";
 import type { BundleStateReport } from "@/lib/types";
-import { Normalizer } from "./normalizeSubWorker";
+// Type-only: Normalizer is only used as a type here. Importing it as a VALUE
+// would pull normalizeSubWorker's `expose(Normalizer)` side-effect into this
+// worker's bundle, attaching a second comlink listener that breaks every call.
+import type { Normalizer } from "./normalizeSubWorker";
 import type {
   AbortHandle,
   NormalizerService,
