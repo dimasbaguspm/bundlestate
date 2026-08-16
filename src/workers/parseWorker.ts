@@ -1,6 +1,6 @@
 import { expose, wrap, type Remote } from "comlink";
 import { collectAssets } from "@/lib/parseAssets";
-import { extractZip } from "@/lib/zip";
+import { extractArchive } from "@/lib/zip";
 import type { NormalizeInput } from "@/lib/normalize";
 import type { BundleStateReport } from "@/lib/types";
 import { Normalizer } from "./normalizeSubWorker";
@@ -41,11 +41,15 @@ class ParseWorker implements ParseWorkerService {
     this.normalizerCtor = wrap<typeof Normalizer>(subWorker);
   }
 
+  /**
+   * One parse worker per dropped archive: extracts `.zip` / `.tar.gz` /
+   * `.tgz` / `.gz` from a `ReadableStream` (progress + abort), auto-detects
+   * the bundler, inspects every asset for inline/sidecar source maps, then
+   * hands the raw input to the NormalizeSubWorker via a comlink proxy.
+   * Archive contents never leave worker memory. Unsupported formats are
+   * rejected by the extractor with a clear message.
+   */
   parseZip(file: File, abortHandle: Remote<AbortHandle>): Promise<string> {
-    if (!file.name.toLowerCase().endsWith(".zip")) {
-      return Promise.reject(new Error(`Not a zip file: ${file.name}`));
-    }
-
     const reportId = crypto.randomUUID();
     const job: Job = { instance: null, progress: { phase: "extracting", fraction: 0 } };
     this.jobs.set(reportId, job);
@@ -53,7 +57,7 @@ class ParseWorker implements ParseWorkerService {
     // Background pipeline: extraction → asset collection → normalizer prep.
     void (async () => {
       try {
-        const entries = await extractZip(file.stream(), {
+        const entries = await extractArchive(file.name, file.stream(), {
           expectedBytes: file.size,
           onProgress: (fraction) => {
             job.progress = { phase: "extracting", fraction };

@@ -1,14 +1,24 @@
 import { FileArchive, UploadCloud } from "lucide-react";
 import { clsx } from "clsx";
 import { useRef, useState, type DragEvent } from "react";
+import { isSupportedArchiveName } from "@/lib/zip";
+
+const ACCEPT = ".zip,.tar.gz,.tgz,.gz,application/zip,application/gzip";
+
+const ARCHIVE_MIMES = new Set([
+  "application/zip",
+  "application/gzip",
+  "application/x-gzip",
+]);
 
 interface DropzoneProps {
   onFiles: (files: File[]) => void;
 }
 
 /**
- * HTML5 drag-and-drop entry point. Accepts one or more `.zip` files. No
- * folder picker, no metafile mode — exactly one way in, per the MVP.
+ * HTML5 drag-and-drop entry point. Accepts one or more `.zip`, `.tar.gz`,
+ * `.tgz` or `.gz` archives. No folder picker, no metafile mode — exactly
+ * one way in, per the MVP.
  */
 export function Dropzone({ onFiles }: DropzoneProps) {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -16,16 +26,16 @@ export function Dropzone({ onFiles }: DropzoneProps) {
   const [error, setError] = useState<string | null>(null);
 
   const handleFiles = (files: FileList | File[]) => {
-    const zips = [...files].filter(
-      (f) => f.type === "application/zip" || f.name.toLowerCase().endsWith(".zip"),
+    const archives = [...files].filter(
+      (f) => isSupportedArchiveName(f.name) || ARCHIVE_MIMES.has(f.type),
     );
-    const skipped = [...files].length - zips.length;
+    const skipped = [...files].length - archives.length;
     setError(
       skipped > 0
-        ? `Ignored ${skipped} non-zip ${skipped === 1 ? "file" : "files"} — only .zip uploads are supported.`
+        ? `Ignored ${skipped} unsupported ${skipped === 1 ? "file" : "files"} — only .zip, .tar.gz, .tgz and .gz archives are supported.`
         : null,
     );
-    if (zips.length > 0) onFiles(zips);
+    if (archives.length > 0) onFiles(archives);
   };
 
   const onDrop = (e: DragEvent) => {
@@ -62,7 +72,10 @@ export function Dropzone({ onFiles }: DropzoneProps) {
         )}
         <div className="space-y-1">
           <p className="text-base font-medium">
-            Drag &amp; drop your bundle <span className="font-mono text-ink">.zip</span>
+            Drag &amp; drop your bundle{" "}
+            <span className="font-mono text-ink">.zip</span> <span className="text-dim">·</span>{" "}
+            <span className="font-mono text-ink">.tar.gz</span> <span className="text-dim">·</span>{" "}
+            <span className="font-mono text-ink">.tgz</span>
           </p>
           <p className="text-sm text-dim">
             or click to browse — must contain built JS with source maps
@@ -76,7 +89,7 @@ export function Dropzone({ onFiles }: DropzoneProps) {
       <input
         ref={inputRef}
         type="file"
-        accept=".zip,application/zip"
+        accept={ACCEPT}
         multiple
         className="hidden"
         data-testid="zip-input"
