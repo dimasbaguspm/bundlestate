@@ -3,16 +3,16 @@ import { Navigate, useParams } from "react-router-dom";
 import { FileArchive } from "lucide-react";
 import { clsx } from "clsx";
 import { Badge, btn, btnActive, Spinner } from "@/components/ui";
-import { TreemapTab } from "@/components/treemap-tab";
-import { LineageTab } from "@/components/lineage-tab";
+import { SizeBarsTab } from "@/components/size-bars-tab";
+import { LineageTableTab } from "@/components/lineage-table-tab";
 import { InspectorSidebar } from "@/components/inspector-sidebar";
-import type { GraphSelection } from "@/components/dependency-graph";
+import type { GraphSelection } from "@/lib/dependencyGraph";
 import { getVersions, loadReport, saveVersion } from "@/db";
 import { createVersionsClient } from "@/workers/versions-client";
 import { useBundleStore } from "@/state/store";
 import type { BundleStateReport } from "@/lib/types";
 
-type Tab = "treemap" | "lineage" | "dependencies";
+type Tab = "sizes" | "lineage";
 
 /** One registry check (and cache hydration) per report id, even under StrictMode remounts. */
 const versionChecksStarted = new Set<string>();
@@ -31,8 +31,8 @@ export function ReportPage() {
   const versions = useBundleStore((state) => state.versions);
   const [persisted, setPersisted] = useState<BundleStateReport | null | undefined>(undefined);
   const [missing, setMissing] = useState(false);
-  const [tab, setTab] = useState<Tab>("treemap");
-  const [treeFilter, setTreeFilter] = useState("");
+  const [tab, setTab] = useState<Tab>("sizes");
+  const [sizesFilter, setSizesFilter] = useState("");
   const [lineageFilter, setLineageFilter] = useState("");
   const [selection, setSelection] = useState<GraphSelection | null>(null);
   const [checkingVersions, setCheckingVersions] = useState(false);
@@ -117,7 +117,7 @@ export function ReportPage() {
   }
 
   const tabs: { id: Tab; label: string }[] = [
-    { id: "treemap", label: "Treemap" },
+    { id: "sizes", label: "Sizes" },
     { id: "lineage", label: "Lineage" },
   ];
 
@@ -158,23 +158,21 @@ export function ReportPage() {
       </div>
 
       <div className="relative flex min-h-0 flex-1 flex-col">
-        {tab === "treemap" && (
-          <TreemapTab
+        {tab === "sizes" && (
+          <SizeBarsTab
             report={report}
-            filter={treeFilter}
-            onFilter={setTreeFilter}
+            filter={sizesFilter}
+            onFilter={setSizesFilter}
             onNodeClick={selectPackage}
             selectedFullName={selection?.kind === "package" ? selection.id : null}
           />
         )}
         {tab === "lineage" && (
-          <LineageTab
+          <LineageTableTab
             report={report}
             filter={lineageFilter}
             onFilter={setLineageFilter}
-            onNodeClick={(node) => {
-              setSelection(node);
-            }}
+            onSelect={(fullName) => setSelection({ kind: "package", id: fullName })}
           />
         )}
         <InspectorSidebar

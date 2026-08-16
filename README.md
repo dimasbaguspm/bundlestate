@@ -14,7 +14,7 @@ Universal, zero-config, client-side **bundle diagnostics** for JavaScript and Ty
 - **Source-map powered** — reads inline or sidecar `.map` files to recover the true module graph.
 - **Dependency awareness** — every package your app ships, including transitive deps, resolved from real module paths.
 - **Version drift** — versions extracted from pnpm virtual-store paths and lockfiles, so you see what actually shipped vs what was declared.
-- **Two views** — a zoomable **Treemap** (bigger size = bigger space) and a **Lineage** dependency graph where each package connects to its dependencies. Version clashes split into per-version nodes (`foo@1.0.0`, `foo@2.0.0`). Each view has a live filter.
+- **Two views** — **Sizes** ranks every package as a proportional bar (bigger package = wider bar) and **Lineage** shows who depends on each package in an expandable table, with version clashes split per version (`foo@1.0.0`, `foo@2.0.0`). Each view has a live filter.
 - **Bloat flags** — gzip sizes per asset and an insights engine that flags unused declared deps and oversized chunks.
 - **Privacy-first** — every byte is processed in Web Workers inside your browser. No backend, no analytics, no data exfiltration.
 
@@ -54,7 +54,7 @@ pnpm dev      # http://localhost:5173
 src/lib/         pure analysis (zip, sourcemap, resolver, lockfile, normalize, insights)
 src/workers/     comlink worker pipeline (parse worker + normalize sub worker)
 src/state/       zustand store + job orchestration
-src/components/  dropzone, jobs panel, treemap/lineage tabs, shared UI
+src/components/  dropzone, jobs panel, sizes/lineage views, shared UI
 ```
 
 ## Deploy

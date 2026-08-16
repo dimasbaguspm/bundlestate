@@ -4,8 +4,8 @@ const STEPS = [
   "Build your app with source maps on. A standard `vite build` outputs `dist/` with sidecar `.map` files.",
   "Zip that build output as `.zip`, `.tar.gz`, or `.tgz`.",
   "Drop the zip on the landing page, or click to browse. Analysis runs in your browser.",
-  "In the Treemap, bigger tiles are bigger packages. Scroll to zoom.",
-  "In Lineage, each package is a node connected to its dependencies. Packages with multiple versions show one node per version, like `foo@1.0.0` and `foo@2.0.0`.",
+  "In Sizes, every package is a bar. The wider the bar, the bigger the package.",
+  "In Lineage, expand a package to see who depends on it, transitively up to the app. Packages with multiple versions are listed per version, like `foo@1.0.0` and `foo@2.0.0`.",
   "Type in the filter to isolate a package for debugging.",
   "Nothing leaves your machine. All parsing happens in Web Workers.",
 ];

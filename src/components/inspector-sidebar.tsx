@@ -5,7 +5,7 @@ import type { BundleStateReport, Package } from "@/lib/types";
 import { findLineages } from "@/lib/lineage";
 import { formatLineageChain, latestBadge, moduleDegrees, type ModuleIdMap } from "@/lib/inspector";
 import { Badge } from "./ui";
-import type { GraphSelection } from "./dependency-graph";
+import type { GraphSelection } from "@/lib/dependencyGraph";
 
 interface InspectorSidebarProps {
   report: BundleStateReport;

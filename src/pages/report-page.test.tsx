@@ -7,13 +7,12 @@ import { useBundleStore } from "@/state/store";
 import { clearReports, saveReport } from "@/db";
 import { makeReport } from "@/test/fixtures";
 
-// ECharts needs a canvas; jsdom has none. Stub the chart components so the
-// page's load/redirect logic is what gets tested here.
-vi.mock("@/components/Treemap", () => ({
-  Treemap: () => <div data-testid="treemap-mock" />,
+// ECharts-free views stubbed so the page's load/redirect logic is what's tested.
+vi.mock("@/components/size-bars", () => ({
+  SizeBars: () => <div data-testid="sizes-mock" />,
 }));
-vi.mock("@/components/dependency-graph", () => ({
-  DependencyGraph: () => <div data-testid="graph-mock" />,
+vi.mock("@/components/lineage-table", () => ({
+  LineageTable: () => <div data-testid="lineage-mock" />,
 }));
 // jsdom has no `Worker` — stub the versions pipeline the report page kicks off.
 vi.mock("@/workers/versions-client", () => ({

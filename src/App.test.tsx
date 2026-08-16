@@ -11,11 +11,11 @@ vi.mock("@/state/runJob", () => ({
 }));
 // ECharts needs a canvas; jsdom has none — the report page renders viz
 // components that would fail on mount instead.
-vi.mock("@/components/Treemap", () => ({
-  Treemap: () => <div data-testid="treemap-mock" />,
+vi.mock("@/components/size-bars", () => ({
+  SizeBars: () => <div data-testid="sizes-mock" />,
 }));
-vi.mock("@/components/dependency-graph", () => ({
-  DependencyGraph: () => <div data-testid="graph-mock" />,
+vi.mock("@/components/lineage-table", () => ({
+  LineageTable: () => <div data-testid="lineage-mock" />,
 }));
 // jsdom has no `Worker` — stub the versions pipeline the report page kicks off.
 vi.mock("@/workers/versions-client", () => ({

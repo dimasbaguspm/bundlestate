@@ -1,5 +1,10 @@
 import type { BundleStateReport, ModuleGraph } from "./types";
 
+/** A clicked node in the report surface (package in the size/lineage views). */
+export type GraphSelection =
+  | { kind: "package"; id: string }
+  | { kind: "module"; id: string; pkg?: string };
+
 /** One node in the ECharts graph series (package or module level). */
 export interface DependencyGraphNode {
   id: string;
