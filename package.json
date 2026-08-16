@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "type": "module",
   "packageManager": "pnpm@10.34.5",
-  "description": "Universal, zero-config, client-side diagnostic dashboard for JS/TS application bundles. Drag a build zip with source maps, see exactly which packages (incl. transitive deps) ship \u2014 nothing leaves the browser.",
+  "description": "Universal, zero-config, client-side diagnostic dashboard for JS/TS application bundles. Drag a build zip with source maps, see exactly which packages (incl. transitive deps) ship — nothing leaves the browser.",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/dimasbaguspm/bundlestate.git"
@@ -17,7 +17,9 @@
     "node": ">=24"
   },
   "pnpm": {
-    "onlyBuiltDependencies": ["esbuild"]
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
   },
   "scripts": {
     "dev": "vite",
@@ -34,11 +36,13 @@
   "dependencies": {
     "clsx": "^2.1.1",
     "comlink": "^4.4.2",
+    "dexie": "^4.4.5",
     "echarts": "^5.6.0",
     "fflate": "^0.8.2",
     "lucide-react": "^0.475.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "react-router-dom": "^7.18.2",
     "zustand": "^5.0.3"
   },
   "devDependencies": {
@@ -55,6 +59,7 @@
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.5.2",
     "conventional-changelog-conventionalcommits": "^8.0.0",
+    "fake-indexeddb": "^6.2.5",
     "jsdom": "^26.1.0",
     "oxfmt": "^0.63.0",
     "oxlint": "^1.78.0",
