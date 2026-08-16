@@ -9,26 +9,19 @@ vi.mock("@/state/runJob", () => ({
   runParseJob: (...args: unknown[]) => runParseJobMock(...args),
   abortJob: vi.fn(),
 }));
-// ECharts needs a canvas; jsdom has none — the report page renders viz
-// components that would fail on mount instead.
-vi.mock("@/components/size-bars", () => ({
-  SizeBars: () => <div data-testid="sizes-mock" />,
+// The D3 treemap needs ResizeObserver; jsdom has none — the report page
+// renders viz components that would fail on mount instead.
+vi.mock("@/components/Treemap", () => ({
+  Treemap: () => <div data-testid="treemap-mock" />,
 }));
 vi.mock("@/components/lineage-table", () => ({
   LineageTable: () => <div data-testid="lineage-mock" />,
-}));
-// jsdom has no `Worker` — stub the versions pipeline the report page kicks off.
-vi.mock("@/workers/versions-client", () => ({
-  createVersionsClient: () => ({
-    checkVersions: vi.fn(async () => []),
-    dispose: vi.fn(async () => {}),
-  }),
 }));
 
 describe("App", () => {
   beforeEach(() => {
     runParseJobMock.mockClear();
-    useBundleStore.setState({ jobs: {}, reports: {}, activeReportId: null, versions: {} });
+    useBundleStore.setState({ jobs: {}, reports: {}, activeReportId: null });
   });
 
   it("renders the landing page with the dropzone", () => {

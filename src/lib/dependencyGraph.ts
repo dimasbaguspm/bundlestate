@@ -1,10 +1,5 @@
 import type { BundleStateReport, ModuleGraph } from "./types";
 
-/** A clicked node in the report surface (package in the size/lineage views). */
-export type GraphSelection =
-  | { kind: "package"; id: string }
-  | { kind: "module"; id: string; pkg?: string };
-
 /** One node in the ECharts graph series (package or module level). */
 export interface DependencyGraphNode {
   id: string;
@@ -33,11 +28,6 @@ export interface DependencyGraphData {
   edges: DependencyGraphEdge[];
   /** True when edges were derived from the module import graph. */
   hasModuleData: boolean;
-}
-
-export interface ModuleSubgraphData {
-  nodes: DependencyGraphNode[];
-  edges: DependencyGraphEdge[];
 }
 
 const APP_ID = "app";
@@ -186,54 +176,4 @@ function versionedPackages(report: BundleStateReport): Set<string> {
   const out = new Set<string>();
   for (const [name, versions] of byName) if (versions.size > 1) out.add(name);
   return out;
-}
-
-/**
- * Drill-down data for one package: its own modules plus every direct
- * neighbour (modules connected by an edge touching the package), keeping
- * all edges between the included nodes. Returns null when the module graph
- * (or the package) is unavailable.
- */
-export function buildModuleSubgraph(
-  report: BundleStateReport,
-  fullName: string,
-): ModuleSubgraphData | null {
-  const graph = report.moduleGraph;
-  const memberIds = graph?.pkgModules[fullName];
-  if (!graph || !memberIds || memberIds.length === 0) return null;
-
-  const members = new Set(memberIds);
-  const nodeIds = new Set<string>(memberIds);
-  for (const [from, to] of graph.edges) {
-    if (members.has(from)) nodeIds.add(to);
-    if (members.has(to)) nodeIds.add(from);
-  }
-
-  const pkgOf = new Map(graph.nodes.map((n) => [n.id, n.pkg]));
-  const degree = new Map<string, number>();
-  const edges: DependencyGraphEdge[] = [];
-  for (const [from, to] of graph.edges) {
-    if (!nodeIds.has(from) || !nodeIds.has(to)) continue;
-    edges.push({ source: from, target: to, weight: 1 });
-    degree.set(from, (degree.get(from) ?? 0) + 1);
-    degree.set(to, (degree.get(to) ?? 0) + 1);
-  }
-
-  const nodes: DependencyGraphNode[] = [...nodeIds]
-    .map((id) => ({
-      id,
-      name: displayModuleName(id),
-      category: "module" as const,
-      value: degree.get(id) ?? 0,
-      pkg: pkgOf.get(id),
-    }))
-    .sort((a, b) => a.id.localeCompare(b.id));
-
-  return { nodes, edges };
-}
-
-/** Short label for a module node: last path segment (unique within a package). */
-function displayModuleName(id: string): string {
-  const slash = id.lastIndexOf("/");
-  return slash === -1 ? id : id.slice(slash + 1);
 }

@@ -9,26 +9,18 @@ export interface StoredReport {
   report: BundleStateReport;
 }
 
-export interface StoredVersion {
-  fullName: string;
-  latest: string;
-  checkedAt: string;
-}
-
 /**
- * IndexedDB (via Dexie) persistence for reports and npm-latest-version
- * caches. Reports can be large, so they are stored whole as structured
- * clones — no truncation, no per-field projection.
+ * IndexedDB (via Dexie) persistence for reports. Reports can be large, so they
+ * are stored whole as structured clones — no truncation, no per-field
+ * projection.
  */
 class BundleStateDb extends Dexie {
   reports!: Table<StoredReport, string>;
-  versions!: Table<StoredVersion, string>;
 
   constructor() {
     super("bundlestate-db");
     this.version(1).stores({
       reports: "id, sourceName, generatedAt",
-      versions: "fullName, checkedAt",
     });
   }
 }
@@ -63,17 +55,4 @@ export async function listReports(): Promise<
 > {
   const rows = await db.reports.orderBy("generatedAt").reverse().toArray();
   return rows.map(({ id, sourceName, generatedAt }) => ({ id, sourceName, generatedAt }));
-}
-
-export async function saveVersion(fullName: string, latest: string): Promise<void> {
-  await db.versions.put({ fullName, latest, checkedAt: new Date().toISOString() });
-}
-
-export async function getVersions(): Promise<Record<string, string>> {
-  const rows = await db.versions.toArray();
-  return Object.fromEntries(rows.map(({ fullName, latest }) => [fullName, latest]));
-}
-
-export async function clearVersions(): Promise<void> {
-  await db.versions.clear();
 }

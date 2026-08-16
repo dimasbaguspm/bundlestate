@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildModuleSubgraph, buildPackageGraph } from "./dependencyGraph";
+import { buildPackageGraph } from "./dependencyGraph";
 import type { BundleStateReport, ModuleGraph } from "./types";
 
 const moduleGraph = (edges: ModuleGraph["edges"], pkgModules: ModuleGraph["pkgModules"]): ModuleGraph => ({
@@ -162,56 +162,5 @@ describe("buildPackageGraph", () => {
     const node = data.nodes.find((n) => n.id === "foo@1.0.0")!;
     expect(node.fullName).toBe("foo");
     expect(node.version).toBe("1.0.0");
-  });
-});
-
-describe("buildModuleSubgraph", () => {
-  it("shows a package's modules plus their direct neighbours", () => {
-    const report = makeReport({
-      moduleGraph: moduleGraph(
-        [
-          ["node_modules/react/index.js", "node_modules/react/cjs/react.js"],
-          ["node_modules/react/index.js", "node_modules/moment/moment.js"],
-          ["src/index.ts", "node_modules/react/index.js"],
-        ],
-        {
-          react: ["node_modules/react/index.js", "node_modules/react/cjs/react.js"],
-          moment: ["node_modules/moment/moment.js"],
-        },
-      ),
-    });
-
-    const sub = buildModuleSubgraph(report, "react");
-
-    const ids = sub!.nodes.map((n) => n.id).sort();
-    expect(ids).toEqual([
-      "node_modules/moment/moment.js",
-      "node_modules/react/cjs/react.js",
-      "node_modules/react/index.js",
-      "src/index.ts",
-    ]);
-    const edges = sub!.edges.map((e) => `${e.source}→${e.target}`).sort();
-    expect(edges).toEqual(
-      [
-        "node_modules/react/index.js→node_modules/react/cjs/react.js",
-        "node_modules/react/index.js→node_modules/moment/moment.js",
-        "src/index.ts→node_modules/react/index.js",
-      ].sort(),
-    );
-    const entry = sub!.nodes.find((n) => n.id === "node_modules/react/index.js")!;
-    expect(entry.pkg).toBe("react");
-    expect(entry.category).toBe("module");
-    // The busy hub ranks highest (3 incident module edges).
-    expect(entry.value).toBe(3);
-  });
-
-  it("returns null when the module graph is unavailable", () => {
-    const report = makeReport({ moduleGraph: undefined });
-    expect(buildModuleSubgraph(report, "react")).toBeNull();
-  });
-
-  it("returns null for an unknown package", () => {
-    const report = makeReport();
-    expect(buildModuleSubgraph(report, "not-shipped")).toBeNull();
   });
 });

@@ -62,15 +62,6 @@ describe("bundle store", () => {
     expect(useBundleStore.getState().activeReportId).toBeNull();
   });
 
-  it("merges checked npm versions into the store", () => {
-    useBundleStore.getState().setVersions({ react: "19.0.0" });
-    useBundleStore.getState().setVersions({ lodash: "4.17.21" });
-    expect(useBundleStore.getState().versions).toEqual({
-      react: "19.0.0",
-      lodash: "4.17.21",
-    });
-  });
-
   it("removes reports and clears all state", () => {
     useBundleStore.getState().addReport(makeReport("report-1"));
     useBundleStore.getState().removeReport("report-1");

@@ -20,8 +20,6 @@ interface BundleStateStore {
   reports: Record<string, BundleStateReport>;
   /** Report id of the currently open detail page, or null on the landing page. */
   activeReportId: string | null;
-  /** fullName → latest published npm version (checked by the versions worker). */
-  versions: Record<string, string>;
   addJob: (sourceName: string) => string;
   updateJob: (id: string, patch: Partial<Job>) => void;
   setJobAbort: (id: string, abort: AbortController) => void;
@@ -29,14 +27,12 @@ interface BundleStateStore {
   removeReport: (id: string) => void;
   clearAll: () => void;
   setActiveReport: (id: string | null) => void;
-  setVersions: (versions: Record<string, string>) => void;
 }
 
 export const useBundleStore = create<BundleStateStore>()((set) => ({
   jobs: {},
   reports: {},
   activeReportId: null,
-  versions: {},
 
   addJob: (sourceName) => {
     const id = crypto.randomUUID();
@@ -69,12 +65,9 @@ export const useBundleStore = create<BundleStateStore>()((set) => ({
       return { reports };
     }),
 
-  clearAll: () => set({ jobs: {}, reports: {}, activeReportId: null, versions: {} }),
+  clearAll: () => set({ jobs: {}, reports: {}, activeReportId: null }),
 
   setActiveReport: (id) => set({ activeReportId: id }),
-
-  setVersions: (versions) =>
-    set((state) => ({ versions: { ...state.versions, ...versions } })),
 }));
 
 export function selectJobsList(jobs: Record<string, Job>): Job[] {

@@ -3,39 +3,29 @@ import { Navigate, useParams } from "react-router-dom";
 import { FileArchive } from "lucide-react";
 import { clsx } from "clsx";
 import { Badge, btn, btnActive, Spinner } from "@/components/ui";
-import { SizeBarsTab } from "@/components/size-bars-tab";
+import { TreemapTab } from "@/components/treemap-tab";
 import { LineageTableTab } from "@/components/lineage-table-tab";
-import { InspectorSidebar } from "@/components/inspector-sidebar";
-import type { GraphSelection } from "@/lib/dependencyGraph";
-import { getVersions, loadReport, saveVersion } from "@/db";
-import { createVersionsClient } from "@/workers/versions-client";
+import { loadReport } from "@/db";
 import { useBundleStore } from "@/state/store";
 import type { BundleStateReport } from "@/lib/types";
 
-type Tab = "sizes" | "lineage";
-
-/** One registry check (and cache hydration) per report id, even under StrictMode remounts. */
-const versionChecksStarted = new Set<string>();
+type Tab = "treemap" | "lineage";
 
 /**
  * Detail page at `/r/:reportId`. Prefers the in-memory zustand copy (fresh
  * analysis) and falls back to IndexedDB so a refresh shows the same report.
- * Unknown ids redirect home with a banner. Header holds three tabs —
- * Treemap / Lineage / Dependencies — each full width/height with its own
- * filter; the inspector sidebar overlays on the right.
+ * Unknown ids redirect home with a banner. Header holds two tabs —
+ * Treemap / Lineage — each full width/height with its own filter.
  */
 export function ReportPage() {
   const { id } = useParams<{ id: string }>();
   const reportId = id ?? "";
   const storeReport = useBundleStore((state) => state.reports[reportId]);
-  const versions = useBundleStore((state) => state.versions);
   const [persisted, setPersisted] = useState<BundleStateReport | null | undefined>(undefined);
   const [missing, setMissing] = useState(false);
-  const [tab, setTab] = useState<Tab>("sizes");
-  const [sizesFilter, setSizesFilter] = useState("");
+  const [tab, setTab] = useState<Tab>("treemap");
+  const [treemapFilter, setTreemapFilter] = useState("");
   const [lineageFilter, setLineageFilter] = useState("");
-  const [selection, setSelection] = useState<GraphSelection | null>(null);
-  const [checkingVersions, setCheckingVersions] = useState(false);
 
   // Resolve the report: store copy first, then IndexedDB.
   useEffect(() => {
@@ -60,52 +50,6 @@ export function ReportPage() {
     if (report) useBundleStore.getState().setActiveReport(report.id);
   }, [report]);
 
-  // Closes an open node selection when navigating between reports.
-  useEffect(() => {
-    setSelection(null);
-  }, [reportId]);
-
-  // Latest-version badges: hydrate the cache from IndexedDB, then run one
-  // bounded check for the packages we have not seen before.
-  useEffect(() => {
-    if (!report || versionChecksStarted.has(report.id)) return;
-    versionChecksStarted.add(report.id);
-
-    void (async () => {
-      const cached = await getVersions();
-      useBundleStore.getState().setVersions(cached);
-
-      const fresh = report.packages
-        .map((p) => p.fullName)
-        .filter((name) => !cached[name]);
-      if (fresh.length === 0) return;
-
-      setCheckingVersions(true);
-      try {
-        const client = createVersionsClient();
-        try {
-          const results = await client.checkVersions(fresh.map((fullName) => ({ fullName })));
-          const updates: Record<string, string> = {};
-          for (const result of results) {
-            if (result.latest) {
-              updates[result.fullName] = result.latest;
-              void saveVersion(result.fullName, result.latest);
-            }
-          }
-          useBundleStore.getState().setVersions(updates);
-        } finally {
-          await client.dispose();
-        }
-      } finally {
-        setCheckingVersions(false);
-      }
-    })();
-  }, [report]);
-
-  const selectPackage = (fullName: string) => {
-    setSelection({ kind: "package", id: fullName });
-  };
-
   if (missing) return <Navigate to="/" replace state={{ missingReport: reportId }} />;
 
   if (!report) {
@@ -117,7 +61,7 @@ export function ReportPage() {
   }
 
   const tabs: { id: Tab; label: string }[] = [
-    { id: "sizes", label: "Sizes" },
+    { id: "treemap", label: "Treemap" },
     { id: "lineage", label: "Lineage" },
   ];
 
@@ -158,13 +102,11 @@ export function ReportPage() {
       </div>
 
       <div className="relative flex min-h-0 flex-1 flex-col">
-        {tab === "sizes" && (
-          <SizeBarsTab
+        {tab === "treemap" && (
+          <TreemapTab
             report={report}
-            filter={sizesFilter}
-            onFilter={setSizesFilter}
-            onNodeClick={selectPackage}
-            selectedFullName={selection?.kind === "package" ? selection.id : null}
+            filter={treemapFilter}
+            onFilter={setTreemapFilter}
           />
         )}
         {tab === "lineage" && (
@@ -172,16 +114,8 @@ export function ReportPage() {
             report={report}
             filter={lineageFilter}
             onFilter={setLineageFilter}
-            onSelect={(fullName) => setSelection({ kind: "package", id: fullName })}
           />
         )}
-        <InspectorSidebar
-          report={report}
-          selection={selection}
-          versions={versions}
-          checking={checkingVersions}
-          onClose={() => setSelection(null)}
-        />
       </div>
     </div>
   );

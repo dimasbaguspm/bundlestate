@@ -1,9 +1,9 @@
-import { LineageTable } from "./lineage-table";
+import { Treemap } from "./Treemap";
 import { FilterInput } from "./ui";
 import type { BundleStateReport } from "@/lib/types";
 
-/** Lineage tab: expandable dependant table. Filterable. */
-export function LineageTableTab({
+/** Treemap tab: responsive package-size treemap, filterable. */
+export function TreemapTab({
   report,
   filter,
   onFilter,
@@ -15,7 +15,9 @@ export function LineageTableTab({
   return (
     <div className="flex min-h-0 w-full flex-1 flex-col gap-2 p-2">
       <FilterInput value={filter} onChange={onFilter} placeholder="Filter packages…" />
-      <LineageTable report={report} filter={filter} />
+      <div className="min-h-0 flex-1">
+        <Treemap report={report} filterQuery={filter} className="h-full w-full" />
+      </div>
     </div>
   );
 }

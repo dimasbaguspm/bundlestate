@@ -1,13 +1,10 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import {
   clearReports,
-  clearVersions,
   deleteReport,
-  getVersions,
   listReports,
   loadReport,
   saveReport,
-  saveVersion,
 } from "./db";
 import type { BundleStateReport } from "@/lib/types";
 
@@ -55,7 +52,6 @@ function makeReport(id: string, sourceName = "demo.zip"): BundleStateReport {
 describe("bundlestate-db", () => {
   beforeEach(async () => {
     await clearReports();
-    await clearVersions();
   });
 
   it("round-trips a full report including nested module graph", async () => {
@@ -97,18 +93,5 @@ describe("bundlestate-db", () => {
     const rows = await listReports();
     expect(rows.map((r) => r.id)).toEqual(["r-new", "r-old"]);
     expect(rows[0]).toEqual({ id: "r-new", sourceName: "new.zip", generatedAt: fresh.generatedAt });
-  });
-
-  it("stores latest versions and reads them back as a map", async () => {
-    await saveVersion("react", "19.0.0");
-    await saveVersion("lodash", "4.17.21");
-
-    expect(await getVersions()).toEqual({ react: "19.0.0", lodash: "4.17.21" });
-  });
-
-  it("overwrites a previously cached version", async () => {
-    await saveVersion("react", "18.3.1");
-    await saveVersion("react", "19.0.0");
-    expect(await getVersions()).toEqual({ react: "19.0.0" });
   });
 });

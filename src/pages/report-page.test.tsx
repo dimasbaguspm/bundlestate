@@ -7,19 +7,13 @@ import { useBundleStore } from "@/state/store";
 import { clearReports, saveReport } from "@/db";
 import { makeReport } from "@/test/fixtures";
 
-// ECharts-free views stubbed so the page's load/redirect logic is what's tested.
-vi.mock("@/components/size-bars", () => ({
-  SizeBars: () => <div data-testid="sizes-mock" />,
+// The D3 treemap needs ResizeObserver/canvas; jsdom has none. Stub the views
+// so the page's load/redirect logic is what gets tested here.
+vi.mock("@/components/Treemap", () => ({
+  Treemap: () => <div data-testid="treemap-mock" />,
 }));
 vi.mock("@/components/lineage-table", () => ({
   LineageTable: () => <div data-testid="lineage-mock" />,
-}));
-// jsdom has no `Worker` — stub the versions pipeline the report page kicks off.
-vi.mock("@/workers/versions-client", () => ({
-  createVersionsClient: () => ({
-    checkVersions: vi.fn(async () => []),
-    dispose: vi.fn(async () => {}),
-  }),
 }));
 
 function renderRoute(initialPath: string) {
