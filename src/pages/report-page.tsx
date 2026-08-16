@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Navigate, useParams } from "react-router-dom";
-import { FileArchive, Lightbulb } from "lucide-react";
+import { FileArchive } from "lucide-react";
 import { clsx } from "clsx";
 import { Badge, btn, btnActive, Spinner } from "@/components/ui";
 import { TreemapTab } from "@/components/treemap-tab";
@@ -37,7 +37,6 @@ export function ReportPage() {
   const [lineageFilter, setLineageFilter] = useState("");
   const [depsFilter, setDepsFilter] = useState("");
   const [selection, setSelection] = useState<GraphSelection | null>(null);
-  const [insightsOpen, setInsightsOpen] = useState(false);
   const [checkingVersions, setCheckingVersions] = useState(false);
 
   // Resolve the report: store copy first, then IndexedDB.
@@ -66,7 +65,6 @@ export function ReportPage() {
   // Closes an open node selection when navigating between reports.
   useEffect(() => {
     setSelection(null);
-    setInsightsOpen(false);
   }, [reportId]);
 
   // Latest-version badges: hydrate the cache from IndexedDB, then run one
@@ -106,13 +104,7 @@ export function ReportPage() {
     })();
   }, [report]);
 
-  const openInsights = () => {
-    setSelection(null);
-    setInsightsOpen(true);
-  };
-
   const selectPackage = (fullName: string) => {
-    setInsightsOpen(false);
     setSelection({ kind: "package", id: fullName });
   };
 
@@ -153,9 +145,6 @@ export function ReportPage() {
             : `gzip ${(report.insights.gzipRatio * 100).toFixed(1)}%`}
         </Badge>
         <div className="ml-auto flex items-center gap-2">
-          <button type="button" className={clsx(btn, "px-2.5 py-1 text-xs")} onClick={openInsights}>
-            <Lightbulb size={13} aria-hidden /> Insights
-          </button>
           <div
             role="tablist"
             aria-label="Report views"
@@ -177,7 +166,7 @@ export function ReportPage() {
         </div>
       </div>
 
-      <div className="relative min-h-0 flex-1">
+      <div className="relative flex min-h-0 flex-1 flex-col">
         {tab === "treemap" && (
           <TreemapTab
             report={report}
@@ -193,7 +182,6 @@ export function ReportPage() {
             filter={lineageFilter}
             onFilter={setLineageFilter}
             onNodeClick={(node) => {
-              setInsightsOpen(false);
               setSelection(node);
             }}
           />
@@ -209,13 +197,9 @@ export function ReportPage() {
         <InspectorSidebar
           report={report}
           selection={selection}
-          insightsOpen={insightsOpen}
           versions={versions}
           checking={checkingVersions}
-          onClose={() => {
-            setSelection(null);
-            setInsightsOpen(false);
-          }}
+          onClose={() => setSelection(null)}
         />
       </div>
     </div>

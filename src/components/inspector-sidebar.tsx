@@ -1,19 +1,16 @@
 import { useMemo } from "react";
-import { AlertTriangle, Boxes, GitBranch, X } from "lucide-react";
+import { Boxes, GitBranch, X } from "lucide-react";
 import { clsx } from "clsx";
-import type { BundleStateReport, Package, VersionClash } from "@/lib/types";
+import type { BundleStateReport, Package } from "@/lib/types";
 import { findLineages } from "@/lib/lineage";
 import { formatLineageChain, latestBadge, moduleDegrees, type ModuleIdMap } from "@/lib/inspector";
-import { formatBytes } from "@/lib/format";
 import { Badge } from "./ui";
 import type { GraphSelection } from "./dependency-graph";
 
 interface InspectorSidebarProps {
   report: BundleStateReport;
-  /** Selected graph/treemap node, or null. */
+  /** Selected graph/treemap node, or null (sidebar hidden). */
   selection: GraphSelection | null;
-  /** Show the insights summary (nothing selected). */
-  insightsOpen: boolean;
   /** fullName → latest published npm version (checked so far). */
   versions: Record<string, string>;
   /** Version checks are still running. */
@@ -39,25 +36,6 @@ function InsightRow({ icon, title, children }: { icon?: React.ReactNode; title: 
       </h4>
       {children}
     </section>
-  );
-}
-
-function VersionClashesList({ clashes }: { clashes: VersionClash[] }) {
-  if (clashes.length === 0) return <p className="text-sm text-dim">No duplicate versions bundled.</p>;
-  return (
-    <ul className="space-y-2">
-      {clashes.map((clash) => (
-        <li key={clash.fullName} className="rounded-md border border-edge bg-well px-2 py-1.5">
-          <p className="font-mono text-sm text-ink">{clash.fullName}</p>
-          {clash.versions.map((v) => (
-            <p key={v.version} className="mt-0.5 pl-2 text-xs text-dim">
-              <span className="font-mono text-accent">v{v.version}</span>
-              {v.importedBy.length > 0 && ` — imported by ${v.importedBy.join(", ")}`}
-            </p>
-          ))}
-        </li>
-      ))}
-    </ul>
   );
 }
 
@@ -181,89 +159,17 @@ function ModuleDetails({
   );
 }
 
-export function InsightsSummary({ report }: { report: BundleStateReport }) {
-  const insights = report.insights;
-
-  return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-2">
-        <Stat label="Total size" value={formatBytes(insights.totalSizeBytes)} />
-        <Stat
-          label="Gzip"
-          value={insights.totalGzipBytes === null ? "—" : formatBytes(insights.totalGzipBytes)}
-        />
-        <Stat
-          label="Gzip ratio"
-          value={insights.gzipRatio === null ? "—" : `${(insights.gzipRatio * 100).toFixed(1)}%`}
-        />
-        <Stat label="Packages" value={String(report.packages.length)} />
-      </div>
-
-      <InsightRow title="Largest assets">
-        <ul className="space-y-0.5">
-          {insights.largestAssets.map((name) => (
-            <li key={name} className="truncate font-mono text-xs text-dim">
-              {name}
-            </li>
-          ))}
-        </ul>
-      </InsightRow>
-
-      <InsightRow title={`Version clashes (${insights.versionClashes.length})`}>
-        <VersionClashesList clashes={insights.versionClashes} />
-      </InsightRow>
-
-      <InsightRow title={`Import cycles (${insights.circularDepCount})`}>
-        {insights.circularDepGroups.length === 0 ? (
-          <p className="text-sm text-dim">No local import cycles detected.</p>
-        ) : (
-          <>
-            <ul className="space-y-1">
-              {insights.circularDepGroups.slice(0, 3).map((group, i) => (
-                <li key={i} className="truncate font-mono text-xs text-dim">
-                  {group.join(" → ")}
-                </li>
-              ))}
-            </ul>
-            {insights.circularDepGroups.length > 3 && (
-              <p className="text-xs text-faint">
-                +{insights.circularDepGroups.length - 3} more group(s)
-              </p>
-            )}
-          </>
-        )}
-      </InsightRow>
-
-      <InsightRow icon={<AlertTriangle size={13} aria-hidden />} title="Unused declared deps">
-        {insights.unusedDeclaredDeps.length === 0 ? (
-          <p className="text-sm text-dim">Every declared dependency ships.</p>
-        ) : (
-          <p className="font-mono text-xs text-ink">
-            {insights.unusedDeclaredDeps.join(", ")}
-          </p>
-        )}
-      </InsightRow>
-    </div>
-  );
-}
-
-/**
- * Right-hand inspector drawer overlaying the canvas. Shows package/module
- * details for the selected node, or the report insights summary when opened
- * without a selection.
- */
 export function InspectorSidebar({
   report,
   selection,
-  insightsOpen,
   versions,
   checking,
   onClose,
 }: InspectorSidebarProps) {
-  const open = selection !== null || insightsOpen;
+  const open = selection !== null;
 
-  let title = "Insights";
-  let body: React.ReactNode;
+  let title = "Inspector";
+  let body: React.ReactNode = null;
   if (selection?.kind === "package") {
     const pkg = report.packages.find((p) => p.fullName === selection.id);
     title = selection.id;
@@ -275,8 +181,6 @@ export function InspectorSidebar({
   } else if (selection?.kind === "module") {
     title = selection.id.split("/").pop() ?? selection.id;
     body = <ModuleDetails report={report} id={selection.id} pkg={selection.pkg} />;
-  } else {
-    body = <InsightsSummary report={report} />;
   }
 
   return (
