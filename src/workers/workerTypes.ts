@@ -40,3 +40,15 @@ export interface AbortHandle {
 export interface NormalizerService {
   normalize(onProgress?: (fraction: number) => void): Promise<BundleStateReport>;
 }
+
+/** Latest-version result from the versions worker. */
+export interface VersionResult {
+  fullName: string;
+  latest: string | null;
+}
+
+/** Interface exposed by the versions sub-worker. */
+export interface VersionsWorkerService {
+  /** Fetch the latest published npm version per package (bounded pool). */
+  checkVersions(packages: { fullName: string }[]): Promise<VersionResult[]>;
+}
