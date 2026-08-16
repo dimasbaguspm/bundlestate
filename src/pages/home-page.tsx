@@ -38,7 +38,7 @@ export function HomePage() {
   };
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col justify-center gap-6 px-4 py-8">
+    <div className="flex min-h-0 w-full flex-1 flex-col justify-center gap-6 px-4 py-8">
       {missingReport && (
         <ErrorBanner message={`Report “${missingReport}” was not found — it may have been removed.`} />
       )}

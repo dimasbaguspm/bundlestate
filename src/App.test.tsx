@@ -34,8 +34,8 @@ describe("App", () => {
   it("renders the landing page with the dropzone", () => {
     render(<App />);
 
-    expect(screen.getByRole("heading", { name: /bundlestate/i })).toBeInTheDocument();
     expect(screen.getByText(/drag & drop your bundle/i)).toBeInTheDocument();
+    expect(screen.getByText("BundleState")).toBeInTheDocument(); // bottom-bar brand
   });
 
   it("shows no report panels before any upload", () => {
