@@ -1,0 +1,24 @@
+{
+  "name": "bundlestate",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "forwardPorts": [5173],
+  "postCreateCommand": "corepack enable && corepack prepare pnpm@10 --activate && pnpm install",
+  "remoteUser": "node",
+  "mounts": [
+    "source=bundlestate-pnpm-store,target=/home/node/.local/share/pnpm/store,type=volume"
+  ],
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "editor.formatOnSave": true,
+        "typescript.tsdk": "node_modules/typescript/lib"
+      },
+      "extensions": [
+        "editorconfig.editorconfig",
+        "dbaeumer.vscode-eslint"
+      ]
+    }
+  }
+}
