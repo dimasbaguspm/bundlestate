@@ -1,5 +1,6 @@
 import { computeInsights } from "./insights";
 import { detectLockfileEntry, parseLockfile, type LockPkg } from "./lockfile";
+import { extractModuleGraph } from "./modulegraph";
 import { resolvePackageFromPath } from "./resolver";
 import { usedModulesFromSources } from "./sourcemap";
 import type { Asset, BundleStateReport, DeclaredDeps, DependencyGraph, Package } from "./types";
@@ -12,6 +13,8 @@ export interface RawAsset {
   bytes: Uint8Array;
   /** Package-owned module paths from the asset's source map. */
   mapSources?: string[];
+  /** Original source text aligned with `mapSources`, when the map carries it. */
+  mapContents?: (string | undefined)[];
 }
 
 export interface NormalizeInput {
@@ -82,6 +85,11 @@ export async function normalizeBundle(input: NormalizeInput): Promise<BundleStat
     }
   }
 
+  // Module-level import graph — extracted from sourcesContent in this worker.
+  const hasAnyContent = rawAssets.some((a) => (a.mapContents ?? []).length > 0);
+  const moduleGraph = hasAnyContent ? extractModuleGraph(rawAssets) : undefined;
+  const rawMapSources = rawAssets.map((a) => a.mapSources ?? []);
+
   const report: BundleStateReport = {
     id: crypto.randomUUID(),
     sourceName: input.sourceName,
@@ -99,7 +107,8 @@ export async function normalizeBundle(input: NormalizeInput): Promise<BundleStat
       rawName: lockfileEntry?.name ?? "",
     },
     graph,
-    insights: computeInsights({ assets, packages, declaredDeps }),
+    moduleGraph,
+    insights: computeInsights({ assets, packages, declaredDeps, rawMapSources, moduleGraph }),
   };
 
   return report;

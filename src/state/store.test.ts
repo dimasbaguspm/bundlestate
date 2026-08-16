@@ -18,6 +18,10 @@ function makeReport(id: string): BundleStateReport {
       largestAssets: [],
       totalSizeBytes: 0,
       totalGzipBytes: null,
+      versionClashes: [],
+      circularDepGroups: [],
+      circularDepCount: 0,
+      lineage: { available: false, nodes: 0, edges: 0, reason: "no maps" },
     },
   };
 }
