@@ -20,7 +20,7 @@ function StatusIcon({ status }: { status: Job["status"] }) {
     case "error":
       return <XCircle size={16} className="text-danger" aria-hidden />;
     case "aborted":
-      return <OctagonX size={16} className="text-muted" aria-hidden />;
+      return <OctagonX size={16} className="text-dim" aria-hidden />;
     default:
       return <Loader2 size={16} className="animate-spin text-ink" aria-hidden />;
   }
@@ -81,7 +81,7 @@ export function JobsPanel({ jobs }: { jobs: Job[] }) {
         </Card>
       ))}
       {active.length > 0 && (
-        <p className="text-xs text-muted">
+        <p className="text-xs text-dim">
           {active.length} active job{active.length === 1 ? "" : "s"} — running in Web Workers,
           on-device
         </p>

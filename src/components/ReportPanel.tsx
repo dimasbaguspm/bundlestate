@@ -14,7 +14,7 @@ function ratioPercent(report: BundleStateReport): string {
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <Card className="space-y-1">
-      <p className="text-xs uppercase tracking-wide text-muted">{label}</p>
+      <p className="text-xs uppercase tracking-wide text-dim">{label}</p>
       <p className="font-mono text-xl text-ink">{value}</p>
     </Card>
   );
@@ -59,13 +59,13 @@ export function ReportPanel({ report }: { report: BundleStateReport }) {
             <AlertTriangle size={16} className="mt-0.5 shrink-0 text-danger" aria-hidden />
             <div className="space-y-1 text-sm">
               <p className="font-medium text-danger">Dependency drift detected</p>
-              <p className="text-muted">
+              <p className="text-dim">
                 Declared but never shipped:{" "}
                 <span className="font-mono text-text">
                   {report.insights.unusedDeclaredDeps.join(", ")}
                 </span>
               </p>
-              <p className="text-xs text-muted">
+              <p className="text-xs text-dim">
                 Serialized report ≈ {formatBytes(pkgBytes)} — plain object, no serialization issues.
               </p>
             </div>
@@ -89,7 +89,7 @@ export function ReportPanel({ report }: { report: BundleStateReport }) {
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead>
-                <tr className="border-b border-line text-xs uppercase tracking-wide text-muted">
+                <tr className="border-b border-edge text-xs uppercase tracking-wide text-dim">
                   <th className="py-2 pr-4 font-medium">Package</th>
                   <th className="py-2 pr-4 font-medium">Version</th>
                   <th className="py-2 pr-4 font-medium">Source</th>
@@ -98,15 +98,15 @@ export function ReportPanel({ report }: { report: BundleStateReport }) {
               </thead>
               <tbody>
                 {report.packages.map((pkg) => (
-                  <tr key={pkg.fullName} className="border-b border-line/50 last:border-0">
+                  <tr key={pkg.fullName} className="border-b border-edge/50 last:border-0">
                     <td className="py-2 pr-4 font-mono">{pkg.fullName}</td>
-                    <td className="py-2 pr-4 font-mono text-muted">{pkg.version ?? "—"}</td>
+                    <td className="py-2 pr-4 font-mono text-dim">{pkg.version ?? "—"}</td>
                     <td className="py-2 pr-4">
                       <Badge tone={pkg.source === "unknown" ? "neutral" : "accent"}>
                         {pkg.source}
                       </Badge>
                     </td>
-                    <td className="py-2 text-muted">
+                    <td className="py-2 text-dim">
                       {pkg.usedIn.length} {pkg.usedIn.length === 1 ? "asset" : "assets"}
                     </td>
                   </tr>

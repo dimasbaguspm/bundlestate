@@ -52,23 +52,23 @@ export function Dropzone({ onFiles }: DropzoneProps) {
         onDrop={onDrop}
         className={clsx(
           "flex cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed px-6 py-14 text-center transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
-          dragging ? "border-ink bg-surface-2" : "border-line bg-surface hover:border-ink/40",
+          dragging ? "border-ink bg-surface-2" : "border-edge bg-surface hover:border-ink/40",
         )}
       >
         {dragging ? (
           <UploadCloud size={40} className="text-ink" aria-hidden />
         ) : (
-          <FileArchive size={40} className="text-muted" aria-hidden />
+          <FileArchive size={40} className="text-dim" aria-hidden />
         )}
         <div className="space-y-1">
           <p className="text-base font-medium">
             Drag &amp; drop your bundle <span className="font-mono text-ink">.zip</span>
           </p>
-          <p className="text-sm text-muted">
+          <p className="text-sm text-dim">
             or click to browse — must contain built JS with source maps
           </p>
         </div>
-        <p className="font-mono text-xs text-muted">
+        <p className="font-mono text-xs text-dim">
           requires inline <span className="text-ink-dim">//# sourceMappingURL=data:…</span> or
           sidecar <span className="text-ink-dim">.map</span> files
         </p>
