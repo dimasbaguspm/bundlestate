@@ -6,6 +6,8 @@ export interface TreemapNode {
   value?: number;
   tooltip?: string;
   children?: TreemapNode[];
+  /** ECharts item style override (used for the selected-package highlight). */
+  itemStyle?: { color?: string };
 }
 
 /**
@@ -29,5 +31,17 @@ export function buildTreemap(report: BundleStateReport): TreemapNode[] {
       tooltip: `${asset.name} — ${asset.sizeBytes.toLocaleString()} bytes (${asset.usedModules.length} packages)`,
       children,
     };
+  });
+}
+
+/**
+ * Fresh copy of the treemap with the node named `fullName` (any depth)
+ * highlighted — used while the inspector is open for a package.
+ */
+export function highlightNode(nodes: TreemapNode[], fullName: string): TreemapNode[] {
+  return nodes.map((node) => {
+    const next: TreemapNode = { ...node, children: node.children && highlightNode(node.children, fullName) };
+    if (node.name === fullName) next.itemStyle = { color: "#eecd85" };
+    return next;
   });
 }

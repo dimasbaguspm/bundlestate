@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { HomePage } from "./home-page";
@@ -6,6 +6,22 @@ import { ReportPage } from "./report-page";
 import { useBundleStore } from "@/state/store";
 import { clearReports, saveReport } from "@/db";
 import { makeReport } from "@/test/fixtures";
+
+// ECharts needs a canvas; jsdom has none. Stub the chart components so the
+// page's load/redirect logic is what gets tested here.
+vi.mock("@/components/Treemap", () => ({
+  Treemap: () => <div data-testid="treemap-mock" />,
+}));
+vi.mock("@/components/dependency-graph", () => ({
+  DependencyGraph: () => <div data-testid="graph-mock" />,
+}));
+// jsdom has no `Worker` — stub the versions pipeline the report page kicks off.
+vi.mock("@/workers/versions-client", () => ({
+  createVersionsClient: () => ({
+    checkVersions: vi.fn(async () => []),
+    dispose: vi.fn(async () => {}),
+  }),
+}));
 
 function renderRoute(initialPath: string) {
   return render(
