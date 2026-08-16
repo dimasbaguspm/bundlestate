@@ -35,7 +35,8 @@ describe("App", () => {
     render(<App />);
 
     expect(screen.getByText(/drag & drop your bundle/i)).toBeInTheDocument();
-    expect(screen.getByText("BundleState")).toBeInTheDocument(); // bottom-bar brand
+    // bottom bar: history entrypoint present
+    expect(screen.getByRole("button", { name: /history/i })).toBeInTheDocument();
   });
 
   it("shows no report panels before any upload", () => {
