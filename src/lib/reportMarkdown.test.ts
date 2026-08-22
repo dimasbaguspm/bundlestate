@@ -7,7 +7,7 @@ function report(): BundleStateReport {
     id: "r",
     sourceName: "app.zip",
     generatedAt: new Date().toISOString(),
-    assets: [{ name: "a.js", sizeBytes: 100, gzipBytes: 40, usedModules: ["react", "lodash"] }],
+    assets: [{ name: "a.js", sizeBytes: 100, gzipBytes: 40, usedModules: ["react", "lodash"], rawBytes: "", kind: "js" }],
     packages: [
       { name: "react", fullName: "react", version: "19.0.0", source: "pnpm", usedIn: ["a.js"] },
       { name: "lodash", fullName: "lodash", version: "4.17.21", source: "pnpm", usedIn: ["a.js"] },

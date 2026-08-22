@@ -4,6 +4,7 @@ import { extractModuleGraph } from "./modulegraph";
 import { collectStaticFiles } from "./files";
 import { resolvePackageFromPath } from "./resolver";
 import { usedModulesFromSources } from "./sourcemap";
+import { toBase64 } from "./zip";
 import type { Asset, BundleStateReport, DeclaredDeps, DependencyGraph, Package } from "./types";
 import type { ZipEntry } from "./zip";
 
@@ -40,6 +41,15 @@ export async function gzipSize(bytes: Uint8Array): Promise<number> {
   return compressed.byteLength;
 }
 
+/** Coarse asset kind from the file extension. */
+export function kindFromName(name: string): Asset["kind"] {
+  const lower = name.toLowerCase();
+  if (lower.endsWith(".css")) return "css";
+  if (lower.endsWith(".html") || lower.endsWith(".htm")) return "html";
+  if (lower.endsWith(".js") || lower.endsWith(".mjs") || lower.endsWith(".cjs")) return "js";
+  return "other";
+}
+
 /**
  * Build the normalized `BundleStateReport` from parse-worker output:
  * gzip sizes, package aggregation from source maps, declared deps from the
@@ -54,6 +64,8 @@ export async function normalizeBundle(input: NormalizeInput): Promise<BundleStat
       sizeBytes: raw.sizeBytes,
       gzipBytes: await gzipSize(raw.bytes),
       usedModules: usedModulesFromSources(raw.mapSources ?? []),
+      rawBytes: toBase64(raw.bytes),
+      kind: kindFromName(raw.name),
     })),
   );
 
