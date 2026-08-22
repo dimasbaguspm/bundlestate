@@ -8,8 +8,8 @@ function report(): BundleStateReport {
     sourceName: "app.zip",
     generatedAt: new Date().toISOString(),
     assets: [
-      { name: "a.js", sizeBytes: 100, gzipBytes: 40, usedModules: ["react", "lodash"] },
-      { name: "b.js", sizeBytes: 20, gzipBytes: 10, usedModules: ["lodash"] },
+      { name: "a.js", sizeBytes: 100, gzipBytes: 40, usedModules: ["react", "lodash"], rawBytes: "", kind: "js" },
+      { name: "b.js", sizeBytes: 20, gzipBytes: 10, usedModules: ["lodash"], rawBytes: "", kind: "js" },
     ],
     packages: [],
     declaredDeps: { dependencies: {}, devDependencies: {}, peerDependencies: {} },
