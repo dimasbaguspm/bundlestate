@@ -64,3 +64,34 @@ export function findCircularGroups(
   groups.sort((a, b) => b.length - a.length || a[0].localeCompare(b[0]));
   return groups;
 }
+
+/**
+ * Order the members of one circular group into a closed path
+ * (A → B → C → A) by walking the actual import edges. Returns the node ids in
+ * traversal order, with the first node repeated at the end to make the loop
+ * explicit for the step-by-step trace UI (PRD §4.4.2). When the edges don't
+ * form a perfect ring (e.g. a figure-eight SCC), it falls back to the given
+ * group order, still closing back to the start.
+ */
+export function traceCycle(group: string[], edges: ImportEdge[]): string[] {
+  if (group.length < 2) return [...group];
+  const adj = new Map<string, string[]>();
+  for (const id of group) adj.set(id, []);
+  for (const [from, to] of edges) {
+    if (adj.has(from) && adj.has(to)) adj.get(from)!.push(to);
+  }
+  const path: string[] = [group[0]];
+  const seen = new Set<string>([group[0]]);
+  let current = group[0];
+  for (let step = 0; step < group.length; step++) {
+    const next = (adj.get(current) ?? []).find((n) => !seen.has(n) || n === group[0]);
+    if (!next) break;
+    path.push(next);
+    if (next === group[0]) break;
+    seen.add(next);
+    current = next;
+  }
+  // guarantee closure back to start
+  if (path[path.length - 1] !== group[0]) path.push(group[0]);
+  return path;
+}
