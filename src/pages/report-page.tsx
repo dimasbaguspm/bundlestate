@@ -8,12 +8,13 @@ import { ListTableTab } from "@/components/list-table-tab";
 import { FilesTab } from "@/components/files-tab";
 import { PreviewTab } from "@/components/preview-tab";
 import { InspectorTab } from "@/components/inspector-tab";
+import { CyclesTab } from "@/components/cycles-tab";
 import { loadReport } from "@/db";
 import { buildMarkdownReport } from "@/lib/reportMarkdown";
 import { useBundleStore } from "@/state/store";
 import type { BundleStateReport } from "@/lib/types";
 
-type Tab = "treemap" | "list" | "files" | "preview" | "inspector";
+type Tab = "treemap" | "list" | "files" | "preview" | "inspector" | "cycles";
 
 /**
  * Detail page at `/r/:reportId`. Prefers the in-memory zustand copy (fresh
@@ -74,6 +75,7 @@ export function ReportPage() {
     { id: "files", label: "Files" },
     { id: "preview", label: "Preview" },
     { id: "inspector", label: "Inspector" },
+    { id: "cycles", label: "Cycles" },
   ];
 
   return (
@@ -125,6 +127,7 @@ export function ReportPage() {
         )}
         {tab === "preview" && <PreviewTab report={report} />}
         {tab === "inspector" && <InspectorTab report={report} />}
+        {tab === "cycles" && <CyclesTab report={report} />}
       </div>
     </div>
   );
