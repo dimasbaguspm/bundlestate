@@ -7,12 +7,13 @@ import { TreemapTab } from "@/components/treemap-tab";
 import { ListTableTab } from "@/components/list-table-tab";
 import { FilesTab } from "@/components/files-tab";
 import { PreviewTab } from "@/components/preview-tab";
+import { InspectorTab } from "@/components/inspector-tab";
 import { loadReport } from "@/db";
 import { buildMarkdownReport } from "@/lib/reportMarkdown";
 import { useBundleStore } from "@/state/store";
 import type { BundleStateReport } from "@/lib/types";
 
-type Tab = "treemap" | "list" | "files" | "preview";
+type Tab = "treemap" | "list" | "files" | "preview" | "inspector";
 
 /**
  * Detail page at `/r/:reportId`. Prefers the in-memory zustand copy (fresh
@@ -72,6 +73,7 @@ export function ReportPage() {
     { id: "list", label: "List" },
     { id: "files", label: "Files" },
     { id: "preview", label: "Preview" },
+    { id: "inspector", label: "Inspector" },
   ];
 
   return (
@@ -122,6 +124,7 @@ export function ReportPage() {
           <FilesTab report={report} filter={filesFilter} onFilter={setFilesFilter} />
         )}
         {tab === "preview" && <PreviewTab report={report} />}
+        {tab === "inspector" && <InspectorTab report={report} />}
       </div>
     </div>
   );
