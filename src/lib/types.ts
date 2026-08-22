@@ -51,6 +51,15 @@ export interface Asset {
   gzipBytes: number | null;
   /** Package fullNames resolved from the asset's `.map` sources. */
   usedModules: string[];
+  /**
+   * Original asset source as a base64 string, so the in-browser Preview
+   * sandbox can execute/inspect it without re-reading the zip. Empty string
+   * for non-JS assets to keep the report size sane. Stored as base64 (not a
+   * raw Uint8Array) so the report stays JSON-serializable for IndexedDB.
+   */
+  rawBytes: string;
+  /** Coarse asset kind, derived from the file extension. */
+  kind: "js" | "css" | "html" | "other";
 }
 
 /** A package the app actually ships (resolved from source maps). */

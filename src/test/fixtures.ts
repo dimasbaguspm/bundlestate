@@ -6,7 +6,7 @@ export function makeReport(id: string, sourceName = "demo.zip"): BundleStateRepo
     id,
     sourceName,
     generatedAt: new Date().toISOString(),
-    assets: [{ name: "a.js", sizeBytes: 100, gzipBytes: 40, usedModules: ["react"] }],
+    assets: [{ name: "a.js", sizeBytes: 100, gzipBytes: 40, usedModules: ["react"], rawBytes: "", kind: "js" }],
     packages: [
       {
         name: "react",

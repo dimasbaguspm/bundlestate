@@ -13,7 +13,7 @@ function makeReport(id: string, sourceName = "demo.zip"): BundleStateReport {
     id,
     sourceName,
     generatedAt: new Date().toISOString(),
-    assets: [{ name: "a.js", sizeBytes: 10, gzipBytes: 4, usedModules: ["react"] }],
+    assets: [{ name: "a.js", sizeBytes: 10, gzipBytes: 4, usedModules: ["react"], rawBytes: "", kind: "js" }],
     packages: [
       {
         name: "react",
