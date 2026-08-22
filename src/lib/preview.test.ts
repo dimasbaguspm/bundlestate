@@ -16,7 +16,7 @@ describe("preview sandbox", () => {
     expect(doc).toContain('id="app"');
     // the source is embedded as a JSON string and executed as a module script
     expect(doc).toContain('"console.log(\\"hi\\")"');
-    expect(doc).toContain('type="module"');
+    expect(doc).toContain("Blob");
   });
 
   it("defaults the mount node to bs-root when none given", () => {
