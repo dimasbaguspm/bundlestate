@@ -56,3 +56,9 @@ export async function listReports(): Promise<
   const rows = await db.reports.orderBy("generatedAt").reverse().toArray();
   return rows.map(({ id, sourceName, generatedAt }) => ({ id, sourceName, generatedAt }));
 }
+
+/** All stored reports with their full payload, newest first. */
+export async function loadAllReports(): Promise<BundleStateReport[]> {
+  const rows = await db.reports.orderBy("generatedAt").reverse().toArray();
+  return rows.map((r) => r.report);
+}
