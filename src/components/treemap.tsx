@@ -16,12 +16,12 @@ interface PanState {
 }
 
 /**
- * Responsive D3 treemap rendered as a zoomable/pannable SVG that fills its
- * container. Leaves (packages) are sized proportionally to their bytes, so a
- * bigger package occupies a bigger area. Packages are grouped inside their
- * owning asset (file), which is drawn as a faint region with a file-name
- * label. Wheel-zoom (to cursor), drag-to-pan and zoom buttons are supported;
- * touch-drag pans on mobile. Filterable by package name.
+ * Responsive D3 treemap. The SVG element itself grows with the zoom level
+ * (`width = w * k`, `height = h * k`) inside a scrollable container, so
+ * zooming genuinely expands the rectangles and you pan/scroll to explore —
+ * the content is never clipped. Wheel-zoom keeps the point under the cursor
+ * fixed; drag pans; zoom buttons and a reset are provided. Packages are
+ * sized by bytes and grouped inside their owning asset (file) region.
  */
 export function Treemap({
   report,
@@ -33,7 +33,6 @@ export function Treemap({
   className?: string;
 }) {
   const ref = useRef<HTMLDivElement>(null);
-  const svgRef = useRef<SVGSVGElement>(null);
   const [size, setSize] = useState<{ w: number; h: number }>({ w: 0, h: 0 });
   const [pan, setPan] = useState<PanState>({ k: 1, x: 0, y: 0 });
   const dragRef = useRef<{ x: number; y: number; px: number; py: number } | null>(null);
@@ -55,20 +54,27 @@ export function Treemap({
 
   const rects = layoutTreemap(report, size.w, size.h, filterQuery);
 
-  const onWheel = useCallback((e: React.WheelEvent<SVGSVGElement>) => {
-    e.preventDefault();
-    const rect = svgRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    const mx = e.clientX - rect.left;
-    const my = e.clientY - rect.top;
+  const zoomAt = useCallback((factor: number, cx: number, cy: number) => {
     setPan((p) => {
-      const factor = e.deltaY < 0 ? 1.12 : 1 / 1.12;
-      const k = Math.min(6, Math.max(0.4, p.k * factor));
-      const x = mx - ((mx - p.x) * k) / p.k;
-      const y = my - ((my - p.y) * k) / p.k;
+      const k = Math.min(8, Math.max(0.5, p.k * factor));
+      // Keep the point under the cursor fixed while the SVG grows.
+      const x = cx - (cx - p.x) * (k / p.k);
+      const y = cy - (cy - p.y) * (k / p.k);
       return { k, x, y };
     });
   }, []);
+
+  const onWheel = useCallback(
+    (e: React.WheelEvent<SVGSVGElement>) => {
+      e.preventDefault();
+      const rect = ref.current?.getBoundingClientRect();
+      if (!rect || size.w === 0) return;
+      const cx = e.clientX - rect.left + pan.x;
+      const cy = e.clientY - rect.top + pan.y;
+      zoomAt(e.deltaY < 0 ? 1.15 : 1 / 1.15, cx, cy);
+    },
+    [pan.x, pan.y, size.w, zoomAt],
+  );
 
   const onPointerDown = (e: React.PointerEvent<SVGSVGElement>) => {
     (e.target as Element).setPointerCapture?.(e.pointerId);
@@ -108,21 +114,23 @@ export function Treemap({
     }
   }
   const assets = rects.filter((r) => !r.isPackage);
+  const w = size.w * pan.k;
+  const h = size.h * pan.k;
 
   return (
     <div
       ref={ref}
-      className={clsx("relative min-h-0 w-full", className)}
+      className={clsx("relative min-h-0 w-full overflow-auto", className)}
       aria-label="Package size treemap"
     >
       {size.w > 0 && (
         <>
-          <div className="absolute right-2 top-2 z-10 flex gap-1">
+          <div className="sticky right-2 top-2 z-10 float-right ml-2 mt-2 flex gap-1">
             <button
               type="button"
               aria-label="Zoom in"
               className="rounded border border-edge bg-surface-2 p-1.5 text-ink hover:bg-well"
-              onClick={() => setPan((p) => ({ ...p, k: Math.min(6, p.k * 1.2) }))}
+              onClick={() => zoomAt(1.25, w / 2, h / 2)}
             >
               <ZoomIn size={14} />
             </button>
@@ -130,7 +138,7 @@ export function Treemap({
               type="button"
               aria-label="Zoom out"
               className="rounded border border-edge bg-surface-2 p-1.5 text-ink hover:bg-well"
-              onClick={() => setPan((p) => ({ ...p, k: Math.max(0.4, p.k / 1.2) }))}
+              onClick={() => zoomAt(1 / 1.25, w / 2, h / 2)}
             >
               <ZoomOut size={14} />
             </button>
@@ -144,77 +152,75 @@ export function Treemap({
             </button>
           </div>
           <svg
-            ref={svgRef}
-            width={size.w}
-            height={size.h}
+            width={w}
+            height={h}
             role="img"
             aria-label="Package size treemap"
             className="block touch-none select-none"
+            style={{ transform: `translate(${pan.x}px, ${pan.y}px)` }}
             onWheel={onWheel}
             onPointerDown={onPointerDown}
             onPointerMove={onPointerMove}
             onPointerUp={onPointerUp}
           >
-            <g transform={`translate(${pan.x},${pan.y}) scale(${pan.k})`}>
-              {/* asset (file) regions first */}
-              {assets.map((r, i) => (
+            {/* asset (file) regions first */}
+            {assets.map((r, i) => (
+              <rect
+                key={`a${i}`}
+                x={r.x}
+                y={r.y}
+                width={r.width}
+                height={r.height}
+                fill={ASSET_FILL}
+                stroke={ASSET_STROKE}
+                strokeWidth={1}
+              />
+            ))}
+            {/* package leaves */}
+            {rects.map((r, i) =>
+              r.isPackage ? (
                 <rect
-                  key={`a${i}`}
+                  key={`p${i}`}
                   x={r.x}
                   y={r.y}
                   width={r.width}
                   height={r.height}
-                  fill={ASSET_FILL}
-                  stroke={ASSET_STROKE}
-                  strokeWidth={1}
+                  fill={r.fullName ? colors.get(r.fullName) : "#27402c"}
+                  rx={1}
                 />
-              ))}
-              {/* package leaves */}
-              {rects.map((r, i) =>
-                r.isPackage ? (
-                  <rect
-                    key={`p${i}`}
-                    x={r.x}
-                    y={r.y}
-                    width={r.width}
-                    height={r.height}
-                    fill={r.fullName ? colors.get(r.fullName) : "#27402c"}
-                    rx={1}
-                  />
-                ) : null,
-              )}
-              {/* package labels (big enough leaves) */}
-              {rects.map((r, i) =>
-                r.isPackage && r.width > 40 && r.height > 16 ? (
-                  <text
-                    key={`l${i}`}
-                    x={r.x + 3}
-                    y={r.y + Math.min(13, r.height / 2)}
-                    fill={LABEL_FILL}
-                    fontSize={10}
-                    className="select-none pointer-events-none"
-                  >
-                    {r.name}
-                  </text>
-                ) : null,
-              )}
-              {/* file-name labels on top, so grouping is legible */}
-              {assets.map((r, i) =>
-                r.width > 48 && r.height > 20 ? (
-                  <text
-                    key={`f${i}`}
-                    x={r.x + 3}
-                    y={r.y + 11}
-                    fill={LABEL_FILL}
-                    fontSize={9}
-                    opacity={0.85}
-                    className="select-none pointer-events-none"
-                  >
-                    {fitText(r.name, r.width - 6)}
-                  </text>
-                ) : null,
-              )}
-            </g>
+              ) : null,
+            )}
+            {/* package labels (big enough leaves) */}
+            {rects.map((r, i) =>
+              r.isPackage && r.width > 40 && r.height > 16 ? (
+                <text
+                  key={`l${i}`}
+                  x={r.x + 3}
+                  y={r.y + Math.min(13, r.height / 2)}
+                  fill={LABEL_FILL}
+                  fontSize={10}
+                  className="select-none pointer-events-none"
+                >
+                  {r.name}
+                </text>
+              ) : null,
+            )}
+            {/* file-name labels on top, so grouping is legible */}
+            {assets.map((r, i) =>
+              r.width > 48 && r.height > 20 ? (
+                <text
+                  key={`f${i}`}
+                  x={r.x + 3}
+                  y={r.y + 11}
+                  fill={LABEL_FILL}
+                  fontSize={9}
+                  opacity={0.85}
+                  className="select-none pointer-events-none"
+                >
+                  {fitText(r.name, r.width - 6)}
+                </text>
+              ) : null,
+            )}
           </svg>
         </>
       )}
@@ -222,10 +228,8 @@ export function Treemap({
   );
 }
 
-/** Trim a label to fit roughly within `maxPx` at 9px font. */
-function fitText(label: string, maxPx: number): string {
-  const approx = maxPx / 5.2; // ~5.2px per char at 9px mono-ish
-  if (label.length <= approx) return label;
-  const head = Math.max(4, Math.floor(approx / 2) - 1);
-  return `${label.slice(0, head)}…${label.slice(-4)}`;
+/** Truncate a label to fit within `max` px (approx, monospace 9px). */
+function fitText(name: string, max: number): string {
+  const approx = Math.max(1, Math.floor(max / 5.5));
+  return name.length > approx ? `${name.slice(0, Math.max(1, approx - 1))}…` : name;
 }

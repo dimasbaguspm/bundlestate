@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
-import { Navigate, NavLink, Outlet, useParams } from "react-router-dom";
-import { FileArchive } from "lucide-react";
+import { Link, Navigate, NavLink, Outlet, useParams } from "react-router-dom";
+import { FileArchive, FilePlus2, Download } from "lucide-react";
 import { clsx } from "clsx";
 import { Badge, btn, btnActive, CopyButton, Spinner } from "@/components/ui";
+import { Breadcrumb } from "@/components/breadcrumb";
+import { PageHeader } from "@/components/page-header";
 import { loadReport } from "@/db";
 import { buildMarkdownReport } from "@/utils/report-markdown";
 import { useBundleStore } from "@/core/stores/store";
@@ -14,10 +16,13 @@ export type ReportContext = BundleStateReport;
 /**
  * Detail page at `/r/:reportId`. Prefers the in-memory zustand copy (fresh
  * analysis) and falls back to IndexedDB so a refresh shows the same report.
- * Unknown ids redirect home with a banner. The header holds the view tabs as
- * real routes (`/r/:id/:tab`), so each tab is deep-linkable and the browser
- * back/forward buttons work. A Copy button generates a PR-ready Markdown
- * report. Tabs receive the resolved report through the Outlet context.
+ * Unknown ids redirect home with a banner.
+ *
+ * Layout: a sticky PageHeader (breadcrumb + report actions) on top, the view
+ * tabs directly beneath it, and the routed tab content filling the rest. Tabs
+ * are real routes (`/r/:id/:tab`) so each is deep-linkable and the browser
+ * back/forward buttons work. The resolved report is passed to tabs via the
+ * Outlet context.
  */
 export function ReportPage() {
   const { id } = useParams<{ id: string }>();
@@ -26,7 +31,6 @@ export function ReportPage() {
   const [persisted, setPersisted] = useState<BundleStateReport | null | undefined>(undefined);
   const [missing, setMissing] = useState(false);
 
-  // Resolve the report: store copy first, then IndexedDB.
   useEffect(() => {
     if (storeReport) {
       setPersisted(undefined);
@@ -50,6 +54,7 @@ export function ReportPage() {
   }, [report]);
 
   const markdown = report ? buildMarkdownReport(report) : "";
+  const json = report ? JSON.stringify(report, null, 2) : "";
 
   if (missing) return <Navigate to="/" replace state={{ missingReport: reportId }} />;
 
@@ -66,50 +71,80 @@ export function ReportPage() {
     { id: "files", label: "Files" },
     { id: "preview", label: "Preview" },
     { id: "inspector", label: "Inspector" },
-    { id: "diff", label: "Diff" },
   ];
+
+  const headerLeft = (
+    <>
+      <FileArchive size={16} className="shrink-0 text-ink" aria-hidden />
+      <Breadcrumb items={[{ label: "Home", to: "/" }, { label: report.sourceName }]} />
+    </>
+  );
+
+  const headerActions = (
+    <>
+      <span className="hidden items-center gap-1 sm:flex">
+        <Badge tone="accent">{report.assets.length} assets</Badge>
+        <Badge tone="neutral">{report.packages.length} pkgs</Badge>
+        <Badge tone="neutral">
+          {report.insights.gzipRatio === null
+            ? "gzip —"
+            : `gzip ${(report.insights.gzipRatio * 100).toFixed(1)}%`}
+        </Badge>
+      </span>
+      <CopyButton value={markdown} label="Copy report" className="px-2.5 py-1 text-xs" />
+      <CopyButton
+        value={json}
+        label="Copy JSON"
+        className="hidden px-2.5 py-1 text-xs sm:inline-flex"
+      />
+      <button
+        type="button"
+        onClick={() => {
+          const blob = new Blob([json], { type: "application/json" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = `${report.sourceName.replace(/[^a-z0-9._-]/gi, "_")}.json`;
+          a.click();
+          URL.revokeObjectURL(url);
+        }}
+        className={clsx(btn, "px-2.5 py-1 text-xs")}
+        title="Download report as JSON"
+      >
+        <Download size={13} className="sm:mr-1" aria-hidden />
+        <span className="hidden sm:inline">Download</span>
+      </button>
+      <Link to="/" className={clsx(btn, "px-2.5 py-1 text-xs")} title="New analysis">
+        <FilePlus2 size={13} className="sm:mr-1" aria-hidden />
+        <span className="hidden sm:inline">New</span>
+      </Link>
+    </>
+  );
 
   return (
     <div className="flex min-h-0 flex-1 flex-col" aria-label={`Report for ${report.sourceName}`}>
-      <div className="flex flex-col gap-2 border-b border-edge px-3 py-2 sm:flex-row sm:items-center sm:gap-3">
-        <div className="flex min-w-0 items-center gap-2">
-          <FileArchive size={16} className="shrink-0 text-ink" aria-hidden />
-          <h2 className="max-w-[24ch] truncate font-mono text-sm font-semibold text-ink">
-            {report.sourceName}
-          </h2>
-          <Badge tone="accent">{report.assets.length} assets</Badge>
-          <Badge tone="neutral">{report.packages.length} pkgs</Badge>
-          <Badge tone="neutral">
-            {report.insights.gzipRatio === null
-              ? "gzip —"
-              : `gzip ${(report.insights.gzipRatio * 100).toFixed(1)}%`}
-          </Badge>
-        </div>
-        <div className="flex items-center gap-2 sm:ml-auto">
-          <CopyButton value={markdown} label="Copy report" className="px-2.5 py-1 text-xs" />
-          <nav
-            aria-label="Report views"
-            className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto rounded-lg border border-edge bg-surface-2 p-0.5 sm:flex-none"
+      <PageHeader left={headerLeft} actions={headerActions} />
+      <nav
+        aria-label="Report views"
+        className="flex items-center gap-1 overflow-x-auto border-b border-edge bg-surface-2 px-2 py-1"
+      >
+        {tabs.map((t) => (
+          <NavLink
+            key={t.id}
+            to={t.id}
+            role="tab"
+            className={({ isActive }) =>
+              clsx(
+                btn,
+                "whitespace-nowrap px-2.5 py-1.5 text-xs min-h-[36px] min-w-[44px] flex-1 sm:flex-none",
+                isActive && btnActive,
+              )
+            }
           >
-            {tabs.map((t) => (
-              <NavLink
-                key={t.id}
-                to={t.id}
-                role="tab"
-                className={({ isActive }) =>
-                  clsx(
-                    btn,
-                    "whitespace-nowrap px-2.5 py-1.5 text-xs min-h-[36px] min-w-[44px] flex-1 sm:flex-none",
-                    isActive && btnActive,
-                  )
-                }
-              >
-                {t.label}
-              </NavLink>
-            ))}
-          </nav>
-        </div>
-      </div>
+            {t.label}
+          </NavLink>
+        ))}
+      </nav>
 
       <div className="relative flex min-h-0 flex-1 flex-col">
         <Outlet context={report} />

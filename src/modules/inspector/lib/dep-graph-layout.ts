@@ -6,7 +6,6 @@ import {
   forceCollide,
   type SimulationNodeDatum,
 } from "d3-force";
-import type { ImportEdge, ModuleNode } from "@/utils/types";
 
 export interface GraphNode extends SimulationNodeDatum {
   id: string;
@@ -29,18 +28,24 @@ export interface DepGraphLayout {
   height: number;
 }
 
+export interface LayoutNodeInput {
+  id: string;
+  local: boolean;
+}
+
 /**
- * Compute a force-directed layout for the module import graph. Cycle members
- * (from `circularDepGroups`) are flagged so the view can highlight them.
- * The simulation runs synchronously for a fixed number of ticks so the result
- * is deterministic and ready to render without animation frame loops.
+ * Compute a force-directed layout for an import/dependency graph. `nodes` are
+ * simple {id, local} descriptors; `edges` are [source, target] id tuples.
+ * Cycle members (from `circularDepGroups`) are flagged so the view can
+ * highlight them. The simulation runs synchronously for a fixed number of
+ * ticks so the layout is deterministic and render-ready without animation.
  */
 export function layoutDependencyGraph(
-  nodes: ModuleNode[],
-  edges: ImportEdge[],
+  nodes: LayoutNodeInput[],
+  edges: [string, string][],
   circularDepGroups: string[][],
-  width = 720,
-  height = 460,
+  width = 900,
+  height = 560,
 ): DepGraphLayout {
   const cycleMembers = new Set<string>();
   for (const g of circularDepGroups) for (const m of g) cycleMembers.add(m);
@@ -72,16 +77,29 @@ export function layoutDependencyGraph(
         .strength(0.4),
     )
     .force("center", forceCenter(width / 2, height / 2))
-    .force("collide", forceCollide(14))
+    .force("collide", forceCollide(16))
     .stop();
 
   const ticks = Math.min(300, 80 + simNodes.length * 3);
   for (let i = 0; i < ticks; i++) sim.tick();
 
-  // Clamp into the viewport.
+  // Pad the coordinate space so the viewBox bounds the whole graph.
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
   for (const n of simNodes) {
-    n.x = Math.max(16, Math.min(width - 16, n.x ?? width / 2));
-    n.y = Math.max(16, Math.min(height - 16, n.y ?? height / 2));
+    minX = Math.min(minX, n.x ?? 0);
+    minY = Math.min(minY, n.y ?? 0);
+    maxX = Math.max(maxX, n.x ?? 0);
+    maxY = Math.max(maxY, n.y ?? 0);
+  }
+  const pad = 32;
+  const shiftX = (minX - pad) * -1;
+  const shiftY = (minY - pad) * -1;
+  for (const n of simNodes) {
+    n.x = (n.x ?? 0) + shiftX;
+    n.y = (n.y ?? 0) + shiftY;
   }
 
   // d3-force mutates link.source/target into node objects; normalize back to
@@ -96,6 +114,10 @@ export function layoutDependencyGraph(
 }
 
 function shortLabel(id: string): string {
-  const parts = id.split("/");
-  return parts[parts.length - 1] || id;
+  // Trim a leading "./" or "/" and show the last path segment, but keep
+  // enough of the parent for disambiguation on short names.
+  const clean = id.replace(/^(\.\/|\/)+/, "");
+  const parts = clean.split("/");
+  if (parts.length <= 2) return clean;
+  return parts.slice(-2).join("/");
 }

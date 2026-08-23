@@ -66,11 +66,15 @@ export function findSidecarEntry(assetName: string, entryNames: string[]): strin
 /** Parse a source map JSON payload, tolerating malformed input. */
 export function parseSourceMap(json: string): SourceMapFile {
   try {
-    const parsed = JSON.parse(json) as Partial<SourceMapFile> | null;
+    const parsed = JSON.parse(json) as Record<string, unknown> | null;
     const sources = Array.isArray(parsed?.sources)
-      ? parsed.sources.filter((s): s is string => typeof s === "string")
+      ? (parsed.sources as unknown[]).filter((s): s is string => typeof s === "string")
       : [];
-    const rawContents = Array.isArray(parsed?.contents) ? parsed.contents : [];
+    const rawContents = Array.isArray(parsed?.sourcesContent)
+      ? (parsed.sourcesContent as unknown[])
+      : Array.isArray(parsed?.contents)
+        ? (parsed.contents as unknown[])
+        : [];
     const contents: (string | undefined)[] = sources.map((_, i) =>
       typeof rawContents[i] === "string" ? rawContents[i] : undefined,
     );

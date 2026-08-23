@@ -8,7 +8,6 @@ import { TreemapTab } from "@/modules/treemap/ui/treemap-tab";
 import { FilesTab } from "@/modules/files/ui/files-tab";
 import { PreviewTab } from "@/modules/preview/ui/preview-tab";
 import { InspectorTab } from "@/modules/inspector/ui/inspector-tab";
-import { DiffTab } from "@/modules/diff/ui/diff-tab";
 
 export default function App() {
   const [helpOpen, setHelpOpen] = useState(false);
@@ -24,7 +23,6 @@ export default function App() {
             <Route path="files" element={<FilesTab />} />
             <Route path="preview" element={<PreviewTab />} />
             <Route path="inspector" element={<InspectorTab />} />
-            <Route path="diff" element={<DiffTab />} />
           </Route>
         </Routes>
       </Shell>

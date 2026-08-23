@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, useCallback } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { AlertTriangle, ZoomIn, ZoomOut, Maximize } from "lucide-react";
 import { layoutDependencyGraph } from "@/modules/inspector/lib/dep-graph-layout";
 import { buildPackageGraph } from "@/modules/inspector/lib/dependency-graph";
@@ -10,41 +10,66 @@ interface PanState {
   y: number;
 }
 
-const BASE_W = 720;
-const BASE_H = 460;
+const BASE_W = 900;
+const BASE_H = 560;
 
 /**
- * d3 force-directed view of the module import graph (or, when source maps
- * lack sourcesContent, the package-level dependency graph derived from the
- * lockfile). Cycle members are highlighted (rose) and cycle edges drawn in
- * alert color; ordinary edges are dimmed. Supports wheel-zoom (to cursor),
- * drag-to-pan, and zoom buttons, so large graphs stay navigable.
+ * Import dependency graph. When the analysis produced a module graph (source
+ * maps with contents) the view shows individual files/modules and how they
+ * import one another — "integration between each file". Without that, it
+ * falls back to the package-level graph from the lockfile. Either way the
+ * SVG fills its container, cycles are highlighted in rose, and wheel-zoom /
+ * drag-pan / zoom buttons let you navigate large graphs.
  */
 export function DependencyGraphViz({ report }: { report: BundleStateReport }) {
+  const ref = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
+  const [size, setSize] = useState<{ w: number; h: number }>({ w: 0, h: 0 });
   const [pan, setPan] = useState<PanState>({ k: 1, x: 0, y: 0 });
   const dragRef = useRef<{ x: number; y: number; px: number; py: number } | null>(null);
 
-  const { nodes, links, mode } = useMemo(() => {
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const update = () => setSize({ w: el.clientWidth, h: el.clientHeight });
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  useEffect(() => {
+    setPan({ k: 1, x: 0, y: 0 });
+  }, [report.id]);
+
+  const { nodes, links, edgesPresent } = useMemo(() => {
     const modNodes = report.moduleGraph?.nodes ?? [];
     const modEdges = report.moduleGraph?.edges ?? [];
     if (modNodes.length > 0) {
       const layout = layoutDependencyGraph(
-        modNodes,
+        modNodes.map((n) => ({
+          id: n.id,
+          local: n.pkg === undefined,
+          pkg: n.pkg,
+          version: n.version,
+        })),
         modEdges,
         report.insights.circularDepGroups,
         BASE_W,
         BASE_H,
       );
-      return { nodes: layout.nodes, links: layout.links, mode: "module" as const };
+      return {
+        nodes: layout.nodes,
+        links: layout.links,
+        edgesPresent: modEdges.length > 0,
+      };
     }
-    // Fallback: package-level graph from the lockfile (always available).
     const pkg = buildPackageGraph(report);
     const layout = layoutDependencyGraph(
       pkg.nodes.map((n) => ({
         id: n.id,
         local: n.category === "app",
-        pkg: n.pkg,
+        pkg: n.fullName,
         version: n.version,
       })),
       pkg.edges.map((e) => [e.source, e.target] as [string, string]),
@@ -52,7 +77,7 @@ export function DependencyGraphViz({ report }: { report: BundleStateReport }) {
       BASE_W,
       BASE_H,
     );
-    return { nodes: layout.nodes, links: layout.links, mode: "package" as const };
+    return { nodes: layout.nodes, links: layout.links, edgesPresent: pkg.edges.length > 0 };
   }, [report]);
 
   const onWheel = useCallback((e: React.WheelEvent<SVGSVGElement>) => {
@@ -64,7 +89,6 @@ export function DependencyGraphViz({ report }: { report: BundleStateReport }) {
     setPan((p) => {
       const factor = e.deltaY < 0 ? 1.12 : 1 / 1.12;
       const k = Math.min(4, Math.max(0.4, p.k * factor));
-      // Keep the point under the cursor fixed.
       const x = mx - ((mx - p.x) * k) / p.k;
       const y = my - ((my - p.y) * k) / p.k;
       return { k, x, y };
@@ -99,6 +123,9 @@ export function DependencyGraphViz({ report }: { report: BundleStateReport }) {
   }
 
   const pos = new Map(nodes.map((n) => [n.id, n]));
+  // When there's only an isolated node (no edges), center it.
+  const contentW = Math.max(...nodes.map((n) => n.x ?? 0), BASE_W);
+  const contentH = Math.max(...nodes.map((n) => n.y ?? 0), BASE_H);
 
   return (
     <div className="relative h-full w-full">
@@ -128,12 +155,20 @@ export function DependencyGraphViz({ report }: { report: BundleStateReport }) {
           <Maximize size={14} />
         </button>
       </div>
+      {!edgesPresent && (
+        <div className="absolute left-2 top-2 z-10 rounded border border-edge bg-surface-2 px-2 py-1 text-[11px] text-faint">
+          No import edges detected
+        </div>
+      )}
       <svg
         ref={svgRef}
-        viewBox={`0 0 ${BASE_W} ${BASE_H}`}
+        width={size.w || BASE_W}
+        height={size.h || BASE_H}
+        viewBox={`0 0 ${contentW} ${contentH}`}
         className="h-full w-full touch-none select-none"
         role="img"
-        aria-label={`${mode === "module" ? "Module" : "Package"} import dependency graph`}
+        aria-label="Import dependency graph"
+        preserveAspectRatio="xMidYMid meet"
         onWheel={onWheel}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
@@ -153,31 +188,29 @@ export function DependencyGraphViz({ report }: { report: BundleStateReport }) {
                 y2={t.y}
                 stroke={l.inCycle ? "var(--tint-rose-fg)" : "var(--edge-strong)"}
                 strokeWidth={l.inCycle ? 2 : 1}
-                opacity={l.inCycle ? 0.9 : 0.25}
+                opacity={l.inCycle ? 0.9 : 0.35}
               />
             );
           })}
           {nodes.map((n) => (
             <g key={n.id} transform={`translate(${n.x},${n.y})`}>
               <circle
-                r={n.inCycle ? 7 : 5}
+                r={n.inCycle ? 9 : n.local ? 7 : 6}
                 fill={
                   n.inCycle ? "var(--tint-rose-fg)" : n.local ? "var(--accent)" : "var(--ink-soft)"
                 }
                 stroke={n.inCycle ? "var(--tint-rose-fg)" : "transparent"}
                 strokeWidth={n.inCycle ? 2 : 0}
               />
-              {(n.inCycle || n.local) && (
-                <text
-                  x={8}
-                  y={3}
-                  fontSize={9}
-                  className="fill-ink"
-                  style={{ fontFamily: "monospace" }}
-                >
-                  {n.label.length > 18 ? `${n.label.slice(0, 17)}…` : n.label}
-                </text>
-              )}
+              <text
+                x={11}
+                y={4}
+                fontSize={n.inCycle || n.local ? 11 : 10}
+                className="fill-ink"
+                style={{ fontFamily: "monospace" }}
+              >
+                {n.label.length > 28 ? `${n.label.slice(0, 27)}…` : n.label}
+              </text>
             </g>
           ))}
         </g>
