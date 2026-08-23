@@ -95,6 +95,34 @@ function abortError(): DOMException {
   return new DOMException("Aborted", "AbortError");
 }
 
+/**
+ * Encode raw bytes as a base64 string, safe for binary data and large arrays.
+ * Uses `btoa` in the browser/worker and `Buffer` under Node (tests), building
+ * the binary string in chunks to avoid call-stack overflow on big inputs.
+ */
+export function toBase64(bytes: Uint8Array): string {
+  if (typeof btoa === "function") {
+    let binary = "";
+    const CHUNK = 0x8000;
+    for (let i = 0; i < bytes.length; i += CHUNK) {
+      binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
+    }
+    return btoa(binary);
+  }
+  return Buffer.from(bytes).toString("base64");
+}
+
+/** Reverse of {@link toBase64}: base64 string -> bytes. */
+export function fromBase64(b64: string): Uint8Array {
+  if (typeof atob === "function") {
+    const binary = atob(b64);
+    const out = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) out[i] = binary.charCodeAt(i);
+    return out;
+  }
+  return new Uint8Array(Buffer.from(b64, "base64"));
+}
+
 const ARCHIVE_EXTENSIONS = [".zip", ".tar.gz", ".tgz", ".gz"] as const;
 
 /** True when the file name matches a supported archive extension. */

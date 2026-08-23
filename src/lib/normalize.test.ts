@@ -1,3 +1,4 @@
+import { fromBase64 } from "./zip";
 import { describe, expect, it } from "vitest";
 import { gzipSize, normalizeBundle, type NormalizeInput } from "./normalize";
 
@@ -76,6 +77,10 @@ describe("normalizeBundle", () => {
     expect(asset.sizeBytes).toBe(4096);
     expect(asset.gzipBytes).not.toBeNull();
     expect(asset.gzipBytes!).toBeLessThan(asset.sizeBytes);
+    // raw source is recoverable from base64 and kind is derived from extension
+    expect(asset.kind).toBe("js");
+    const decoded = new TextDecoder().decode(fromBase64(asset.rawBytes));
+    expect(decoded.startsWith('console.log("compressible-content-')).toBe(true);
 
     // packages aggregated with usedIn
     expect(report.packages.map((p) => p.fullName).sort()).toEqual(["react", "react-dom"]);
