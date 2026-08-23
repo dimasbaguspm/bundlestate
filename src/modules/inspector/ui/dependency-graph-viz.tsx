@@ -1,6 +1,10 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { AlertTriangle, ArrowRight, ZoomIn, ZoomOut, Maximize } from "lucide-react";
-import { layoutDependencyGraph } from "@/modules/inspector/lib/dep-graph-layout";
+import {
+  layoutDependencyGraph,
+  type GraphNode,
+  type GraphLink,
+} from "@/modules/inspector/lib/dep-graph-layout";
 import { buildPackageGraph } from "@/modules/inspector/lib/dependency-graph";
 import type { BundleStateReport } from "@/utils/types";
 
@@ -14,8 +18,8 @@ interface PanState {
 
 const BASE_W = 900;
 const BASE_H = 560;
-/** Hard cap so the synchronous force layout can never freeze a mobile tab. */
-const FILE_NODE_CAP = 160;
+/** Hard cap so the layout can never freeze a mobile tab, even on weak CPUs. */
+const FILE_NODE_CAP = 100;
 
 /**
  * Import-flow visualization with two views:
@@ -51,16 +55,26 @@ export function DependencyGraphViz({
 
   useEffect(() => {
     setPan({ k: 1, x: 0, y: 0 });
+    setLayout(null);
   }, [report.id, view]);
 
-  const { nodes, links, totalNodes } = useMemo(() => {
+  const [layout, setLayout] = useState<{
+    nodes: GraphNode[];
+    links: GraphLink[];
+    totalNodes: number;
+  } | null>(null);
+
+  // Compute the force layout in an effect (after first paint) instead of
+  // during render, so the tab never freezes on a weak mobile CPU. The graph
+  // container paints instantly; nodes pop in once layout finishes.
+  useEffect(() => {
+    let cancelled = false;
     const modNodes = report.moduleGraph?.nodes ?? [];
     const modEdges = report.moduleGraph?.edges ?? [];
     const total = modNodes.length;
     let finalNodes = modNodes;
     let finalEdges = modEdges;
     if (modNodes.length > FILE_NODE_CAP) {
-      // Keep the highest-degree nodes so the densest import hubs stay visible.
       const deg = new Map<string, number>();
       for (const [from, to] of modEdges) {
         deg.set(from, (deg.get(from) ?? 0) + 1);
@@ -76,46 +90,51 @@ export function DependencyGraphViz({
       const keep = new Set(finalNodes.map((n) => n.id));
       finalEdges = modEdges.filter(([f, t]) => keep.has(f) && keep.has(t));
     }
-    if (finalNodes.length > 0) {
-      const layout = layoutDependencyGraph(
-        finalNodes.map((n) => ({
+    const compute = () => {
+      if (cancelled) return;
+      if (finalNodes.length > 0) {
+        const result = layoutDependencyGraph(
+          finalNodes.map((n) => ({
+            id: n.id,
+            local: n.pkg === undefined,
+            pkg: n.pkg,
+            version: n.version,
+          })),
+          finalEdges,
+          report.insights.circularDepGroups,
+          BASE_W,
+          BASE_H,
+        );
+        if (!cancelled) setLayout({ nodes: result.nodes, links: result.links, totalNodes: total });
+        return;
+      }
+      const pkg = buildPackageGraph(report);
+      const result = layoutDependencyGraph(
+        pkg.nodes.map((n) => ({
           id: n.id,
-          local: n.pkg === undefined,
-          pkg: n.pkg,
+          local: n.category === "app",
+          pkg: n.fullName,
           version: n.version,
         })),
-        finalEdges,
-        report.insights.circularDepGroups,
+        pkg.edges.map((e) => [e.source, e.target] as [string, string]),
+        [],
         BASE_W,
         BASE_H,
       );
-      return {
-        nodes: layout.nodes,
-        links: layout.links,
-        totalNodes: total,
-        edges: finalEdges,
-      };
-    }
-    const pkg = buildPackageGraph(report);
-    const layout = layoutDependencyGraph(
-      pkg.nodes.map((n) => ({
-        id: n.id,
-        local: n.category === "app",
-        pkg: n.fullName,
-        version: n.version,
-      })),
-      pkg.edges.map((e) => [e.source, e.target] as [string, string]),
-      [],
-      BASE_W,
-      BASE_H,
-    );
-    return {
-      nodes: layout.nodes,
-      links: layout.links,
-      totalNodes: pkg.nodes.length,
-      edges: pkg.edges,
+      if (!cancelled)
+        setLayout({ nodes: result.nodes, links: result.links, totalNodes: pkg.nodes.length });
     };
-  }, [report]);
+    // Defer one frame so the container paints before the (bounded) layout runs.
+    const id = requestAnimationFrame(compute);
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(id);
+    };
+  }, [report, view]);
+
+  const nodes = layout?.nodes ?? [];
+  const links = layout?.links ?? [];
+  const totalNodes = layout?.totalNodes ?? 0;
 
   const onWheel = useCallback((e: React.WheelEvent<SVGSVGElement>) => {
     e.preventDefault();
@@ -150,6 +169,14 @@ export function DependencyGraphViz({
     (e.target as Element).releasePointerCapture?.(e.pointerId);
     dragRef.current = null;
   };
+
+  if (layout === null) {
+    return (
+      <div className="flex h-full items-center justify-center text-sm text-dim">
+        Laying out graph…
+      </div>
+    );
+  }
 
   if (nodes.length === 0) {
     return (
@@ -308,55 +335,63 @@ export function DependencyGraphViz({
   );
 }
 
-/** Edge-to-edge directed import list — no node atoms, mobile-safe. */
+/** Edge-to-edge directed import list — no node atoms, mobile-safe. Shows
+ * every import edge that exists: module-level edges from the source maps
+ * first, then (when module edges are thin) package-map edges so the list is
+ * never just a couple of entries. */
 function FlowList({ report }: { report: BundleStateReport }) {
-  const edges = report.moduleGraph?.edges ?? [];
-  const byId = useMemo(() => {
-    const m = new Map<string, string>();
+  const { rows, labelFor, hasModuleEdges } = useMemo(() => {
+    const modEdges: [string, string][] = report.moduleGraph?.edges ?? [];
+    const labelMap = new Map<string, string>();
     for (const n of report.moduleGraph?.nodes ?? []) {
       const parts = n.id.split("/");
-      m.set(n.id, parts[parts.length - 1] || n.id);
+      labelMap.set(n.id, parts[parts.length - 1] || n.id);
     }
-    return m;
+    const seen = new Set<string>();
+    const out: { from: string; to: string }[] = [];
+    for (const [from, to] of modEdges) {
+      const key = `${from} ${to}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push({ from, to });
+    }
+    // Supplement with package-map edges when module edges are sparse, so the
+    // user sees the full import flow rather than just a couple of entries.
+    if (modEdges.length < 25) {
+      const g = report.graph;
+      const addPkg = (from: string, to: string) => {
+        const key = `${from} ${to}`;
+        if (seen.has(key)) return;
+        seen.add(key);
+        out.push({ from, to });
+      };
+      for (const [app, pkgs] of Object.entries(g.appToPkg ?? {})) {
+        for (const p of pkgs) addPkg(app, p);
+      }
+      for (const [pkg, sub] of Object.entries(g.pkgToSubPkg ?? {})) {
+        for (const s of sub) addPkg(pkg, s);
+      }
+    }
+    const labelFor = (id: string) => labelMap.get(id) ?? id.split("/").pop() ?? id;
+    return { rows: out, labelFor, hasModuleEdges: modEdges.length > 0 };
   }, [report]);
+
   const cycleEdges = useMemo(() => {
     const set = new Set<string>();
-    for (const g of report.insights.circularDepGroups) {
-      for (let i = 0; i < g.length; i++) {
-        const a = g[i];
-        const b = g[(i + 1) % g.length];
+    for (const grp of report.insights.circularDepGroups) {
+      for (let i = 0; i < grp.length; i++) {
+        const a = grp[i];
+        const b = grp[(i + 1) % grp.length];
         set.add(`${a} ${b}`);
       }
     }
     return set;
   }, [report]);
 
-  if (edges.length === 0) {
-    const pkg = buildPackageGraph(report);
-    if (pkg.edges.length === 0) {
-      return (
-        <div className="flex h-full items-center justify-center text-sm text-dim">
-          No import edges detected.
-        </div>
-      );
-    }
+  if (rows.length === 0) {
     return (
-      <div className="h-full overflow-y-auto p-2">
-        <p className="mb-2 text-[11px] uppercase tracking-wide text-dim">
-          Package imports (no source maps)
-        </p>
-        <ul className="space-y-1">
-          {pkg.edges.map((e, i) => (
-            <li
-              key={i}
-              className="flex items-center gap-2 rounded border border-edge bg-well px-2 py-1 font-mono text-[12px]"
-            >
-              <span className="truncate text-ink">{e.source}</span>
-              <ArrowRight size={13} className="shrink-0 text-dim" aria-hidden />
-              <span className="truncate text-ink">{e.target}</span>
-            </li>
-          ))}
-        </ul>
+      <div className="flex h-full items-center justify-center text-sm text-dim">
+        No import edges detected.
       </div>
     );
   }
@@ -364,10 +399,11 @@ function FlowList({ report }: { report: BundleStateReport }) {
   return (
     <div className="h-full overflow-y-auto p-2">
       <p className="mb-2 text-[11px] uppercase tracking-wide text-dim">
-        Directed imports ({edges.length})
+        Directed imports ({rows.length})
+        {!hasModuleEdges && " · package-level (no file imports parsed)"}
       </p>
       <ul className="space-y-1">
-        {edges.map(([from, to], i) => {
+        {rows.map(({ from, to }, i) => {
           const inCycle = cycleEdges.has(`${from} ${to}`);
           return (
             <li
@@ -378,13 +414,13 @@ function FlowList({ report }: { report: BundleStateReport }) {
                   : "border-edge bg-well"
               }`}
             >
-              <span className="min-w-0 flex-1 truncate text-ink">{byId.get(from) ?? from}</span>
+              <span className="min-w-0 flex-1 truncate text-ink">{labelFor(from)}</span>
               <ArrowRight
                 size={13}
                 className={inCycle ? "shrink-0 text-[var(--tint-rose-fg)]" : "shrink-0 text-dim"}
                 aria-hidden
               />
-              <span className="min-w-0 flex-1 truncate text-ink">{byId.get(to) ?? to}</span>
+              <span className="min-w-0 flex-1 truncate text-ink">{labelFor(to)}</span>
             </li>
           );
         })}

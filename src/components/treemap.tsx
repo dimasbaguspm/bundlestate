@@ -15,13 +15,17 @@ interface PanState {
   y: number;
 }
 
+interface PointerTrack {
+  [id: number]: { x: number; y: number };
+}
+
 /**
  * Responsive D3 treemap. The SVG element itself grows with the zoom level
  * (`width = w * k`, `height = h * k`) inside a scrollable container, so
  * zooming genuinely expands the rectangles and you pan/scroll to explore —
- * the content is never clipped. Wheel-zoom keeps the point under the cursor
- * fixed; drag pans; zoom buttons and a reset are provided. Packages are
- * sized by bytes and grouped inside their owning asset (file) region.
+ * the content is never clipped. Supports wheel-zoom, one-finger drag pan,
+ * and two-finger pinch-zoom (touch). Labels appear (and grow) once you zoom
+ * in past a threshold, so detail is revealed as rectangles expand.
  */
 export function Treemap({
   report,
@@ -36,6 +40,8 @@ export function Treemap({
   const [size, setSize] = useState<{ w: number; h: number }>({ w: 0, h: 0 });
   const [pan, setPan] = useState<PanState>({ k: 1, x: 0, y: 0 });
   const dragRef = useRef<{ x: number; y: number; px: number; py: number } | null>(null);
+  const pinchRef = useRef<{ dist: number; cx: number; cy: number } | null>(null);
+  const pointersRef = useRef<PointerTrack>({});
 
   useEffect(() => {
     const el = ref.current;
@@ -57,7 +63,6 @@ export function Treemap({
   const zoomAt = useCallback((factor: number, cx: number, cy: number) => {
     setPan((p) => {
       const k = Math.min(8, Math.max(0.5, p.k * factor));
-      // Keep the point under the cursor fixed while the SVG grows.
       const x = cx - (cx - p.x) * (k / p.k);
       const y = cy - (cy - p.y) * (k / p.k);
       return { k, x, y };
@@ -76,19 +81,55 @@ export function Treemap({
     [pan.x, pan.y, size.w, zoomAt],
   );
 
+  // --- Pinch + one-finger pan (touch) -------------------------------------
   const onPointerDown = (e: React.PointerEvent<SVGSVGElement>) => {
-    (e.target as Element).setPointerCapture?.(e.pointerId);
-    dragRef.current = { x: e.clientX, y: e.clientY, px: pan.x, py: pan.y };
+    try {
+      (e.target as Element).setPointerCapture?.(e.pointerId);
+    } catch {
+      /* capture is best-effort; pinch/pan still works without it */
+    }
+    pointersRef.current[e.pointerId] = { x: e.clientX, y: e.clientY };
+    const pts = Object.values(pointersRef.current);
+    if (pts.length === 2) {
+      const [a, b] = pts;
+      pinchRef.current = {
+        dist: Math.hypot(a.x - b.x, a.y - b.y),
+        cx: (a.x + b.x) / 2,
+        cy: (a.y + b.y) / 2,
+      };
+    } else {
+      dragRef.current = { x: e.clientX, y: e.clientY, px: pan.x, py: pan.y };
+    }
   };
   const onPointerMove = (e: React.PointerEvent<SVGSVGElement>) => {
-    if (!dragRef.current) return;
-    const dx = e.clientX - dragRef.current.x;
-    const dy = e.clientY - dragRef.current.y;
-    setPan((p) => ({ ...p, x: dragRef.current!.px + dx, y: dragRef.current!.py + dy }));
+    if (pointersRef.current[e.pointerId]) {
+      pointersRef.current[e.pointerId] = { x: e.clientX, y: e.clientY };
+    }
+    const pts = Object.values(pointersRef.current);
+    if (pts.length === 2 && pinchRef.current) {
+      const [a, b] = pts;
+      const dist = Math.hypot(a.x - b.x, a.y - b.y);
+      const cx = (a.x + b.x) / 2;
+      const cy = (a.y + b.y) / 2;
+      const rect = ref.current?.getBoundingClientRect();
+      const localCx = (rect ? cx - rect.left : cx) + pan.x;
+      const localCy = (rect ? cy - rect.top : cy) + pan.y;
+      const factor = dist / (pinchRef.current.dist || dist);
+      pinchRef.current = { dist, cx, cy };
+      zoomAt(factor, localCx, localCy);
+      return;
+    }
+    if (dragRef.current) {
+      const dx = e.clientX - dragRef.current.x;
+      const dy = e.clientY - dragRef.current.y;
+      setPan((p) => ({ ...p, x: dragRef.current!.px + dx, y: dragRef.current!.py + dy }));
+    }
   };
   const onPointerUp = (e: React.PointerEvent<SVGSVGElement>) => {
     (e.target as Element).releasePointerCapture?.(e.pointerId);
-    dragRef.current = null;
+    delete pointersRef.current[e.pointerId];
+    if (Object.keys(pointersRef.current).length < 2) pinchRef.current = null;
+    if (Object.keys(pointersRef.current).length === 0) dragRef.current = null;
   };
 
   if (size.w > 0 && rects.length === 0) {
@@ -116,6 +157,10 @@ export function Treemap({
   const assets = rects.filter((r) => !r.isPackage);
   const w = size.w * pan.k;
   const h = size.h * pan.k;
+  // Reveal text detail once zoomed in; expand the label threshold with zoom.
+  const zoom = pan.k;
+  const pkgLabelMin = zoom > 1.4 ? 14 : 40;
+  const fileLabelMin = zoom > 1.4 ? 16 : 48;
 
   return (
     <div
@@ -162,6 +207,7 @@ export function Treemap({
             onPointerDown={onPointerDown}
             onPointerMove={onPointerMove}
             onPointerUp={onPointerUp}
+            onPointerCancel={onPointerUp}
           >
             {/* asset (file) regions first */}
             {assets.map((r, i) => (
@@ -190,30 +236,30 @@ export function Treemap({
                 />
               ) : null,
             )}
-            {/* package labels (big enough leaves) */}
+            {/* package labels — shown when big enough, or once zoomed in */}
             {rects.map((r, i) =>
-              r.isPackage && r.width > 40 && r.height > 16 ? (
+              r.isPackage && r.width > pkgLabelMin && r.height > 14 ? (
                 <text
                   key={`l${i}`}
                   x={r.x + 3}
-                  y={r.y + Math.min(13, r.height / 2)}
+                  y={r.y + Math.min(13 * zoom, r.height / 2)}
                   fill={LABEL_FILL}
-                  fontSize={10}
+                  fontSize={10 * Math.min(zoom, 1.6)}
                   className="select-none pointer-events-none"
                 >
                   {r.name}
                 </text>
               ) : null,
             )}
-            {/* file-name labels on top, so grouping is legible */}
+            {/* file-name labels on top */}
             {assets.map((r, i) =>
-              r.width > 48 && r.height > 20 ? (
+              r.width > fileLabelMin && r.height > 18 ? (
                 <text
                   key={`f${i}`}
                   x={r.x + 3}
-                  y={r.y + 11}
+                  y={r.y + 11 * Math.min(zoom, 1.6)}
                   fill={LABEL_FILL}
-                  fontSize={9}
+                  fontSize={9 * Math.min(zoom, 1.6)}
                   opacity={0.85}
                   className="select-none pointer-events-none"
                 >
