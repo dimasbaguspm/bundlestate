@@ -12,7 +12,8 @@ export interface StoredReport {
 /**
  * IndexedDB (via Dexie) persistence for reports. Reports can be large, so they
  * are stored whole as structured clones — no truncation, no per-field
- * projection.
+ * projection. The report page uses this for refresh-on-load; the Diff tab
+ * uses loadAllReports to compare against any analyzed bundle.
  */
 class BundleStateDb extends Dexie {
   reports!: Table<StoredReport, string>;
@@ -41,23 +42,13 @@ export async function loadReport(id: string): Promise<BundleStateReport | undefi
   return stored?.report;
 }
 
-export async function deleteReport(id: string): Promise<void> {
-  await db.reports.delete(id);
-}
-
+/** Reset all stored reports (used by tests between cases). */
 export async function clearReports(): Promise<void> {
   await db.reports.clear();
 }
 
-/** Light metadata for the home page recent-reports list, newest first. */
-export async function listReports(): Promise<
-  { id: string; sourceName: string; generatedAt: string }[]
-> {
-  const rows = await db.reports.orderBy("generatedAt").reverse().toArray();
-  return rows.map(({ id, sourceName, generatedAt }) => ({ id, sourceName, generatedAt }));
-}
-
-/** All stored reports with their full payload, newest first. */
+/** All stored reports with their full payload, newest first. Used by the
+ * Diff tab to compare against any previously-analyzed bundle. */
 export async function loadAllReports(): Promise<BundleStateReport[]> {
   const rows = await db.reports.orderBy("generatedAt").reverse().toArray();
   return rows.map((r) => r.report);

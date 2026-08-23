@@ -25,8 +25,8 @@ describe("App", () => {
     render(<App />);
 
     expect(screen.getByText(/drop your bundle here/i)).toBeInTheDocument();
-    // bottom bar: history entrypoint present
-    expect(screen.getByRole("button", { name: /history/i })).toBeInTheDocument();
+    // bottom bar: help entrypoint present (history feature removed)
+    expect(screen.getByRole("button", { name: /how to use/i })).toBeInTheDocument();
   });
 
   it("shows no report panels before any upload", () => {

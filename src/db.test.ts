@@ -1,8 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import {
   clearReports,
-  deleteReport,
-  listReports,
   loadReport,
   saveReport,
 } from "./db";
@@ -69,29 +67,9 @@ describe("bundlestate-db", () => {
     expect(await loadReport("nope")).toBeUndefined();
   });
 
-  it("deletes a single report", async () => {
-    await saveReport(makeReport("r-1"));
-    await saveReport(makeReport("r-2"));
-    await deleteReport("r-1");
-
-    expect(await loadReport("r-1")).toBeUndefined();
-    expect(await loadReport("r-2")).not.toBeUndefined();
-  });
-
   it("clears all stored reports", async () => {
     await saveReport(makeReport("r-1"));
     await clearReports();
     expect(await loadReport("r-1")).toBeUndefined();
-  });
-
-  it("lists report metadata newest first", async () => {
-    await saveReport(makeReport("r-old", "old.zip"));
-    const fresh = makeReport("r-new", "new.zip");
-    fresh.generatedAt = new Date(Date.now() + 1000).toISOString();
-    await saveReport(fresh);
-
-    const rows = await listReports();
-    expect(rows.map((r) => r.id)).toEqual(["r-new", "r-old"]);
-    expect(rows[0]).toEqual({ id: "r-new", sourceName: "new.zip", generatedAt: fresh.generatedAt });
   });
 });

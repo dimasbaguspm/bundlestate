@@ -9,17 +9,15 @@ import { BottomBar } from "@/components/BottomBar";
  */
 export function Shell({
   children,
-  onOpenHistory,
   onOpenHelp,
 }: {
   children: ReactNode;
-  onOpenHistory: () => void;
   onOpenHelp: () => void;
 }) {
   return (
     <div className="flex h-screen flex-col bg-canvas text-ink supports-[height:100dvh]:h-dvh">
       <main className="flex min-h-0 w-full flex-1 flex-col overflow-y-auto">{children}</main>
-      <BottomBar onOpenHistory={onOpenHistory} onOpenHelp={onOpenHelp} />
+      <BottomBar onOpenHelp={onOpenHelp} />
     </div>
   );
 }

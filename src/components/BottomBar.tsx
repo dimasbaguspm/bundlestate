@@ -1,39 +1,15 @@
-import { useEffect, useState } from "react";
-import { Bookmark, CircleHelp, MessageSquareText, Moon, Sun, Tag } from "lucide-react";
+import { CircleHelp, MessageSquareText, Moon, Sun, Tag } from "lucide-react";
 import { useTheme } from "@/hooks/use-theme";
 import { APP_VERSION } from "@/constants/version";
 import { SITE_HOST, SITE_NAME, SITE_URL } from "@/constants/site";
-import { listReports } from "@/db";
 
 const FEEDBACK_URL = "https://github.com/dimasbaguspm/bundlestate/issues";
 
-/** Persistent bottom bar following the syntaxdiff pattern exactly: history
+/** Persistent bottom bar following the syntaxdiff pattern exactly: help
  * entrypoint on the left, site URL in the center, version + theme + feedback
  * on the right. */
-export function BottomBar({
-  onOpenHistory,
-  onOpenHelp,
-}: {
-  onOpenHistory: () => void;
-  onOpenHelp: () => void;
-}) {
+export function BottomBar({ onOpenHelp }: { onOpenHelp: () => void }) {
   const { theme, toggle } = useTheme();
-  const [count, setCount] = useState(0);
-
-  useEffect(() => {
-    let active = true;
-    void listReports().then((r) => {
-      if (active) setCount(r.length);
-    });
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  const openHistory = () => {
-    onOpenHistory();
-    void listReports().then((r) => setCount(r.length));
-  };
 
   return (
     <footer className="relative z-30 shrink-0 border-t border-edge">
@@ -47,18 +23,6 @@ export function BottomBar({
           >
             <CircleHelp className="size-4" aria-hidden />
             <span className="hidden text-xs font-medium sm:inline">How to use</span>
-          </button>
-          <button
-            type="button"
-            onClick={openHistory}
-            aria-label="History"
-            className="flex items-center gap-1.5 rounded px-1.5 py-1 text-dim transition-colors hover:bg-surface-2 hover:text-ink"
-          >
-            <Bookmark className="size-4" aria-hidden />
-            <span className="text-xs font-medium tabular-nums sm:hidden">{count}</span>
-            <span className="hidden text-xs font-medium tabular-nums sm:inline">
-              {count} Reports
-            </span>
           </button>
         </div>
 

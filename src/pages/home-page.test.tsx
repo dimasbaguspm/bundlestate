@@ -18,7 +18,7 @@ describe("HomePage", () => {
 
     expect(screen.getByText(/drop your bundle here/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /drop a bundle zip here/i })).toBeInTheDocument();
-    // Recent reports now live in the history drawer, not the landing page.
+    // The landing page is just the dropzone — no report history UI.
     expect(screen.queryByLabelText("Recent reports")).not.toBeInTheDocument();
   });
 });
