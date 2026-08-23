@@ -19,8 +19,19 @@ describe("preview sandbox", () => {
     expect(doc).toContain("Blob");
   });
 
-  it("defaults the mount node to bs-root when none given", () => {
-    const doc = buildSrcDoc(" ", { vars: {}, mount: "" });
-    expect(doc).toContain('id="bs-root"');
+  it("injects the network interception shim when interceptNetwork is on", () => {
+    const doc = buildSrcDoc(" ", { vars: {}, mount: "", interceptNetwork: true });
+    expect(doc).toContain("__bsNet");
+    expect(doc).toContain("window.fetch = function");
+    expect(doc).toContain("network request blocked");
+    expect(doc).toContain("__bsEmitProfile");
+    // the bridge reads the intercept flag from the injected constant
+    expect(doc).toContain("var INTERCEPT = true");
+  });
+
+  it("omits network blocking when interceptNetwork is false", () => {
+    const doc = buildSrcDoc(" ", { vars: {}, mount: "", interceptNetwork: false });
+    expect(doc).toContain("var INTERCEPT = false");
   });
 });
+
