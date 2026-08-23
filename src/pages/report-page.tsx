@@ -1,9 +1,8 @@
 import { useEffect, useState } from "react";
-import { Link, Navigate, NavLink, Outlet, useParams } from "react-router-dom";
-import { FileArchive, FilePlus2, Download, LayoutGrid, Files, Eye, GitGraph } from "lucide-react";
+import { NavLink, Navigate, Outlet, useParams } from "react-router-dom";
+import { FileArchive, LayoutGrid, Files, Eye, GitGraph } from "lucide-react";
 import { clsx } from "clsx";
-import { Badge, btn, CopyButton, Spinner } from "@/components/ui";
-import { Breadcrumb } from "@/components/breadcrumb";
+import { CopyButton, Spinner } from "@/components/ui";
 import { PageHeader } from "@/components/page-header";
 import { loadReport } from "@/db";
 import { buildMarkdownReport } from "@/utils/report-markdown";
@@ -54,7 +53,6 @@ export function ReportPage() {
   }, [report]);
 
   const markdown = report ? buildMarkdownReport(report) : "";
-  const json = report ? JSON.stringify(report, null, 2) : "";
 
   if (missing) return <Navigate to="/" replace state={{ missingReport: reportId }} />;
 
@@ -74,51 +72,23 @@ export function ReportPage() {
   ];
 
   const headerLeft = (
-    <>
-      <FileArchive size={16} className="shrink-0 text-ink" aria-hidden />
-      <Breadcrumb items={[{ label: "Home", to: "/" }, { label: report.sourceName }]} />
-    </>
+    <div className="flex min-w-0 flex-col gap-0.5">
+      <div className="flex min-w-0 items-center gap-1.5">
+        <FileArchive size={15} className="shrink-0 text-ink" aria-hidden />
+        <span className="truncate font-semibold text-ink" title={report.sourceName}>
+          {report.sourceName}
+        </span>
+      </div>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-faint">
+        <span>{((report.insights.totalSizeBytes ?? 0) / (1024 * 1024)).toFixed(2)} MB</span>
+        <span>{report.assets.length} files</span>
+        <span>{report.packages.length} dependencies</span>
+      </div>
+    </div>
   );
 
   const headerActions = (
-    <>
-      <span className="hidden items-center gap-1 sm:flex">
-        <Badge tone="accent">{report.assets.length} assets</Badge>
-        <Badge tone="neutral">{report.packages.length} pkgs</Badge>
-        <Badge tone="neutral">
-          {report.insights.gzipRatio === null
-            ? "gzip —"
-            : `gzip ${(report.insights.gzipRatio * 100).toFixed(1)}%`}
-        </Badge>
-      </span>
-      <CopyButton value={markdown} label="Copy report" className="px-2.5 py-1 text-xs" />
-      <CopyButton
-        value={json}
-        label="Copy JSON"
-        className="hidden px-2.5 py-1 text-xs sm:inline-flex"
-      />
-      <button
-        type="button"
-        onClick={() => {
-          const blob = new Blob([json], { type: "application/json" });
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement("a");
-          a.href = url;
-          a.download = `${report.sourceName.replace(/[^a-z0-9._-]/gi, "_")}.json`;
-          a.click();
-          URL.revokeObjectURL(url);
-        }}
-        className={clsx(btn, "px-2.5 py-1 text-xs")}
-        title="Download report as JSON"
-      >
-        <Download size={13} className="sm:mr-1" aria-hidden />
-        <span className="hidden sm:inline">Download</span>
-      </button>
-      <Link to="/" className={clsx(btn, "px-2.5 py-1 text-xs")} title="New analysis">
-        <FilePlus2 size={13} className="sm:mr-1" aria-hidden />
-        <span className="hidden sm:inline">New</span>
-      </Link>
-    </>
+    <CopyButton value={markdown} label="Copy report" className="px-2.5 py-1 text-xs" />
   );
 
   return (

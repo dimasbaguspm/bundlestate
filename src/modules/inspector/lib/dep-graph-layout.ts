@@ -80,7 +80,7 @@ export function layoutDependencyGraph(
     .force("collide", forceCollide(16))
     .stop();
 
-  const ticks = Math.min(300, 80 + simNodes.length * 3);
+  const ticks = Math.min(150, 60 + simNodes.length * 2);
   for (let i = 0; i < ticks; i++) sim.tick();
 
   // Pad the coordinate space so the viewBox bounds the whole graph.
