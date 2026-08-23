@@ -78,8 +78,13 @@ class ParseWorker implements ParseWorkerService {
         if (assets.length === 0) {
           throw new Error("No JS assets found in the zip — expected built .js/.mjs/.cjs files.");
         }
+        // Source maps are optional: the app still analyzes whatever the bundle
+        // exposes even when no .map files are present. Downstream steps degrade
+        // gracefully (fewer package/version details) instead of blocking.
         if (assets.every((a) => !a.mapSources)) {
-          throw new Error("No source maps found — add .map files (inline or sidecar) and retry.");
+          trace("warn", {
+            message: "No source maps found — analysis will be limited to bundle-level data.",
+          });
         }
 
         job.progress = { phase: "normalizing", fraction: 0 };
