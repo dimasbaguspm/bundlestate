@@ -1,7 +1,7 @@
 import { useMemo, useEffect, useState } from "react";
 import { GitCompare } from "lucide-react";
 import { Badge } from "@/components/ui";
-import { diffReports, type PackageDelta } from "@/lib/diff";
+import { diffReports, type PackageDelta } from "@/features/diff/lib/diff";
 import { formatBytes } from "@/lib/format";
 import { useBundleStore } from "@/state/store";
 import { loadAllReports } from "@/db";

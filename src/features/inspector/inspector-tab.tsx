@@ -3,8 +3,8 @@ import { AlertTriangle, ShieldCheck } from "lucide-react";
 import { Badge } from "@/components/ui";
 import { runInspector, type RuleFinding, type Severity } from "@/lib/rules";
 import { traceCycle } from "@/lib/cycles";
-import { displayModuleId, type ModuleIdMap } from "@/lib/inspector";
-import { DependencyGraphViz } from "@/components/DependencyGraphViz";
+import { displayModuleId, type ModuleIdMap } from "@/features/inspector/lib/inspector";
+import { DependencyGraphViz } from "./DependencyGraphViz";
 import type { BundleStateReport, ModuleNode } from "@/lib/types";
 
 const SEV_TONE: Record<Severity, "danger" | "accent" | "neutral" | "ok"> = {

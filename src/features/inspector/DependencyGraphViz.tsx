@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { AlertTriangle } from "lucide-react";
-import { layoutDependencyGraph } from "@/lib/depGraphLayout";
+import { layoutDependencyGraph } from "@/features/inspector/lib/depGraphLayout";
 import type { BundleStateReport } from "@/lib/types";
 
 /**

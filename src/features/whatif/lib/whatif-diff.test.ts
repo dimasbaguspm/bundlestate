@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { simulateExclusions } from "./whatif";
-import { diffReports } from "./diff";
-import type { BundleStateReport } from "./types";
+import { simulateExclusions } from "@/features/whatif/lib/whatif";
+import { diffReports } from "@/features/diff/lib/diff";
+import type { BundleStateReport } from "@/lib/types";
 
 function makeReport(over: Partial<BundleStateReport> = {}): BundleStateReport {
   const base: BundleStateReport = {

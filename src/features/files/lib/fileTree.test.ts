@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildFileTree, countFiles } from "./fileTree";
-import type { BundleStateReport } from "./types";
+import type { BundleStateReport } from "@/lib/types";
 
 function report(): BundleStateReport {
   return {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildPackageGraph } from "./dependencyGraph";
-import type { BundleStateReport, ModuleGraph } from "./types";
+import type { BundleStateReport, ModuleGraph } from "@/lib/types";
 
 const moduleGraph = (edges: ModuleGraph["edges"], pkgModules: ModuleGraph["pkgModules"]): ModuleGraph => ({
   nodes: [

@@ -8,7 +8,7 @@ import {
   type PreviewEnv,
   type PreviewNetCall,
   type PreviewProfile,
-} from "@/lib/preview";
+} from "@/features/preview/lib/preview";
 import type { BundleStateReport } from "@/lib/types";
 
 const ENV_PRESETS: Record<string, Record<string, string>> = {

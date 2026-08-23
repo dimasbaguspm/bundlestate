@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Sparkles } from "lucide-react";
 import { Badge, btn, btnActive } from "@/components/ui";
-import { simulateExclusions } from "@/lib/whatif";
+import { simulateExclusions } from "@/features/whatif/lib/whatif";
 import { buildPackageSizes } from "@/lib/sizes";
 import { formatBytes } from "@/lib/format";
 import type { BundleStateReport } from "@/lib/types";

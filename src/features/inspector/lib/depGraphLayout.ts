@@ -6,7 +6,7 @@ import {
   forceCollide,
   type SimulationNodeDatum,
 } from "d3-force";
-import type { ImportEdge, ModuleNode } from "./types";
+import type { ImportEdge, ModuleNode } from "@/lib/types";
 
 export interface GraphNode extends SimulationNodeDatum {
   id: string;

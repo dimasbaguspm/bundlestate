@@ -1,4 +1,4 @@
-import type { ModuleGraph, ModuleNode } from "./types";
+import type { ModuleGraph, ModuleNode } from "@/lib/types";
 
 /** id → node lookup for chain formatting. */
 export type ModuleIdMap = Map<string, ModuleNode>;

@@ -6,7 +6,7 @@ import {
   moduleDegrees,
   type ModuleIdMap,
 } from "./inspector";
-import type { ModuleGraph, ModuleNode } from "./types";
+import type { ModuleGraph, ModuleNode } from "@/lib/types";
 
 const byId: ModuleIdMap = new Map<string, ModuleNode>([
   ["src/pages/Dashboard.tsx", { id: "src/pages/Dashboard.tsx", local: true }],

@@ -1,5 +1,5 @@
-import { Treemap } from "./Treemap";
-import { FilterInput } from "./ui";
+import { Treemap } from "@/components/Treemap";
+import { FilterInput } from "@/components/ui";
 import type { BundleStateReport } from "@/lib/types";
 
 /** Treemap tab: responsive package-size treemap, filterable. */

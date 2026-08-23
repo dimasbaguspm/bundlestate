@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { toBase64 } from "./zip";
+import { toBase64 } from "@/lib/zip";
 import { buildSrcDoc, decodeAsset, type PreviewInput } from "./preview";
 
 function doc(input: Partial<PreviewInput> & { env?: PreviewInput["env"] }): string {

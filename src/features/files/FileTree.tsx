@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { ChevronDown, ChevronRight, File as FileIcon, Folder, FolderOpen } from "lucide-react";
 import { clsx } from "clsx";
-import type { FileTreeNode } from "@/lib/fileTree";
+import type { FileTreeNode } from "@/features/files/lib/fileTree";
 
 /** Recursive directory browser for the Files tab. */
 export function FileTree({

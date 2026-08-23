@@ -1,4 +1,4 @@
-import type { BundleStateReport, StaticFile } from "./types";
+import type { BundleStateReport, StaticFile } from "@/lib/types";
 
 /** A node in the Files-tab directory tree. */
 export interface FileTreeNode {

@@ -1,5 +1,5 @@
-import { buildPackageSizes } from "./sizes";
-import type { BundleStateReport } from "./types";
+import { buildPackageSizes } from "@/lib/sizes";
+import type { BundleStateReport } from "@/lib/types";
 
 export interface WhatIfResult {
   /** Recomputed total raw bytes with the exclusions applied. */

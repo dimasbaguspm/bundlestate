@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { clsx } from "clsx";
 import { PackageSearch } from "lucide-react";
-import { layoutTreemap } from "@/lib/treemap";
+import { layoutTreemap } from "@/features/treemap/lib/treemap";
 import type { BundleStateReport } from "@/lib/types";
 
 const PALETTE = ["#1d2f22", "#27402c", "#335337", "#416544", "#52795a", "#c9a84c", "#e2b85c"];

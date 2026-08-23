@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildTreemapData, layoutTreemap } from "./treemap";
-import type { BundleStateReport } from "./types";
+import type { BundleStateReport } from "@/lib/types";
 
 function report(): BundleStateReport {
   return {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { layoutDependencyGraph } from "./depGraphLayout";
-import type { ModuleNode } from "./types";
+import type { ModuleNode } from "@/lib/types";
 
 const node = (id: string, local = true): ModuleNode => ({ id, local, pkg: local ? undefined : "x" });
 

@@ -1,4 +1,4 @@
-import type { BundleStateReport, ModuleGraph } from "./types";
+import type { BundleStateReport, ModuleGraph } from "@/lib/types";
 
 /** One node in the ECharts graph series (package or module level). */
 export interface DependencyGraphNode {

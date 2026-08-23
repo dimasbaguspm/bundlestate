@@ -1,12 +1,12 @@
 import { lazy, useMemo, useState, Suspense } from "react";
 import { FileSearch, Binary } from "lucide-react";
-import { buildFileTree, countFiles, type FileTreeNode } from "@/lib/fileTree";
+import { buildFileTree, countFiles, type FileTreeNode } from "@/features/files/lib/fileTree";
 import { FileTree } from "./FileTree";
-import { FilterInput } from "./ui";
+import { FilterInput } from "@/components/ui";
 import { formatBytes } from "@/lib/format";
 import type { BundleStateReport } from "@/lib/types";
 
-const MonacoPreview = lazy(() => import("./MonacoPreview").then((m) => ({ default: m.MonacoPreview })));
+const MonacoPreview = lazy(() => import("@/components/MonacoPreview").then((m) => ({ default: m.MonacoPreview })));
 
 function basename(path: string): string {
   const i = path.lastIndexOf("/");

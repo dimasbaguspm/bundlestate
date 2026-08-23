@@ -5,7 +5,7 @@ import {
   type HierarchyNode,
   type HierarchyRectangularNode,
 } from "d3-hierarchy";
-import type { BundleStateReport } from "./types";
+import type { BundleStateReport } from "@/lib/types";
 
 /** A rendered treemap rectangle (asset at depth 1, package at depth 2). */
 export interface TreemapRect {
