@@ -121,7 +121,10 @@ export function Button({ variant = "primary", className, ...props }: ButtonProps
 export function Card({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={clsx("rounded-lg border border-edge bg-surface p-4 shadow-[var(--shadow)]", className)}
+      className={clsx(
+        "rounded-lg border border-edge bg-surface p-4 shadow-[var(--shadow)]",
+        className,
+      )}
       {...props}
     />
   );

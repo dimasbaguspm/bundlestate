@@ -1,17 +1,22 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import {
-  clearReports,
-  loadReport,
-  saveReport,
-} from "./db";
-import type { BundleStateReport } from "@/lib/types";
+import { clearReports, loadReport, saveReport } from "./db";
+import type { BundleStateReport } from "@/utils/types";
 
 function makeReport(id: string, sourceName = "demo.zip"): BundleStateReport {
   return {
     id,
     sourceName,
     generatedAt: new Date().toISOString(),
-    assets: [{ name: "a.js", sizeBytes: 10, gzipBytes: 4, usedModules: ["react"], rawBytes: "", kind: "js" }],
+    assets: [
+      {
+        name: "a.js",
+        sizeBytes: 10,
+        gzipBytes: 4,
+        usedModules: ["react"],
+        rawBytes: "",
+        kind: "js",
+      },
+    ],
     packages: [
       {
         name: "react",
@@ -58,9 +63,7 @@ describe("bundlestate-db", () => {
 
     const loaded = await loadReport("r-1");
     expect(loaded).toEqual(report);
-    expect(loaded?.moduleGraph?.pkgModules.react).toEqual([
-      "node_modules/react/index.js",
-    ]);
+    expect(loaded?.moduleGraph?.pkgModules.react).toEqual(["node_modules/react/index.js"]);
   });
 
   it("returns undefined for a missing report", async () => {

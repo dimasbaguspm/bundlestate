@@ -3,13 +3,13 @@ import { render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { HomePage } from "./home-page";
 import { ReportPage } from "./report-page";
-import { useBundleStore } from "@/state/store";
+import { useBundleStore } from "@/core/stores/store";
 import { clearReports, saveReport } from "@/db";
 import { makeReport } from "@/test/fixtures";
 
 // The D3 treemap needs ResizeObserver/canvas; jsdom has none. Stub the views
 // so the page's load/redirect logic is what gets tested here.
-vi.mock("@/components/Treemap", () => ({
+vi.mock("@/components/treemap", () => ({
   Treemap: () => <div data-testid="treemap-mock" />,
 }));
 
@@ -44,17 +44,13 @@ describe("ReportPage", () => {
 
     renderRoute("/r/r-persisted");
 
-    expect(
-      await screen.findByLabelText("Report for persisted.zip"),
-    ).toBeInTheDocument();
+    expect(await screen.findByLabelText("Report for persisted.zip")).toBeInTheDocument();
   });
 
   it("redirects to the landing page with a banner for an unknown id", async () => {
     renderRoute("/r/does-not-exist");
 
     expect(await screen.findByText(/drop your bundle here/i)).toBeInTheDocument();
-    expect(
-      await screen.findByText(/Report “does-not-exist” was not found/i),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/Report “does-not-exist” was not found/i)).toBeInTheDocument();
   });
 });

@@ -1,11 +1,25 @@
 name: Release
 
-# semantic-release: creates a versioned GitHub Release (tag bundlestate_v<ver>),
-# CHANGELOG, and package version bump on every push to main. Version type is
-# derived from Conventional Commits: fix = patch, feat = minor, BREAKING = major.
+# Two publishing paths:
+#
+#   1. NIGHTLY  — on every push to main. Builds/publishes a `nightly` (and
+#      `latest`) container tag WITHOUT bumping package.json. This is the
+#      rolling "main is green" artifact. (The actual image push lives in
+#      ci.yml's build-and-push job; here we only stamp the npm package version
+#      metadata as "nightly" for provenance.)
+#
+#   2. SEMVER   — on a published GitHub Release (workflow_dispatch / release
+#      event). Runs semantic-release, which derives the version bump from
+#      Conventional Commits and the semver already declared in package.json,
+#      then commits the version bump + CHANGELOG back to main. Feature
+#      commits collapse to a patch bump to keep version creep low (matching
+#      the syntaxdiff convention); BREAKING = major.
+
 on:
   push:
     branches: [main]
+  release:
+    types: [published]
   workflow_dispatch:
 
 permissions:
@@ -18,7 +32,37 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  release:
+  nightly:
+    name: Nightly stamp (main)
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.5
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      # No version bump — nightly artifacts are stamped "Nightly" by ci.yml.
+      - name: Confirm nightly build is green
+        run: pnpm exec vite build
+
+  semver:
+    name: Semantic versioned release
+    if: github.event_name == 'release'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -40,6 +84,14 @@ jobs:
 
       - name: Install
         run: pnpm install --frozen-lockfile
+
+      - name: Configure git for release commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Semantic release
         run: pnpm exec semantic-release
