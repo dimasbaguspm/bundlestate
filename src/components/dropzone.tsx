@@ -69,11 +69,13 @@ export function Dropzone({ onFiles }: DropzoneProps) {
         <div className="space-y-1">
           <p className="text-base font-semibold text-ink">Drop your bundle here</p>
           <p className="text-sm text-dim">
-            or click to browse · <span className="font-mono">.zip</span>{" "}
+            or tap to browse · <span className="font-mono">.zip</span>{" "}
             <span className="font-mono">.tar.gz</span> <span className="font-mono">.tgz</span>
           </p>
         </div>
-        <p className="font-mono text-xs text-dim">requires source maps</p>
+        <p className="font-mono text-xs text-dim">
+          source maps optional — analysis works either way
+        </p>
       </div>
       <input
         ref={inputRef}

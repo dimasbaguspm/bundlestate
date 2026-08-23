@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ChevronDown, ChevronRight, File as FileIcon, Folder, FolderOpen } from "lucide-react";
 import { clsx } from "clsx";
+import { formatBytes } from "@/utils/format";
 import type { FileTreeNode } from "@/modules/files/lib/file-tree";
 
 /** Recursive directory browser for the Files tab. */
@@ -23,7 +24,7 @@ export function FileTree({
         <button
           type="button"
           onClick={() => setOpen((v) => !v)}
-          className="flex w-full items-center gap-1 rounded px-1 py-0.5 text-left text-[13px] text-ink hover:bg-surface-2"
+          className="flex w-full items-center gap-1 rounded px-1 py-1 text-left text-[13px] text-ink hover:bg-surface-2"
           style={{ paddingLeft: `${depth * 12 + 4}px` }}
         >
           {open ? (
@@ -37,6 +38,9 @@ export function FileTree({
             <Folder size={13} className="shrink-0 text-accent" />
           )}
           <span className="truncate">{node.name || "root"}</span>
+          <span className="ml-auto shrink-0 pl-2 font-mono text-[11px] tabular-nums text-faint">
+            {formatBytes(node.bytes)}
+          </span>
         </button>
         {open && (
           <div>
@@ -61,7 +65,7 @@ export function FileTree({
       type="button"
       onClick={() => onSelect(node)}
       className={clsx(
-        "flex w-full items-center gap-1 rounded px-1 py-0.5 text-left text-[13px] hover:bg-surface-2",
+        "flex w-full items-center gap-1 rounded px-1 py-1 text-left text-[13px] hover:bg-surface-2",
         isSelected ? "bg-accent/15 text-accent" : "text-ink",
       )}
       style={{ paddingLeft: `${depth * 12 + 18}px` }}
@@ -69,6 +73,9 @@ export function FileTree({
     >
       <FileIcon size={13} className="shrink-0 text-dim" />
       <span className="truncate">{node.name}</span>
+      <span className="ml-auto shrink-0 pl-2 font-mono text-[11px] tabular-nums text-faint">
+        {formatBytes(node.bytes)}
+      </span>
     </button>
   );
 }

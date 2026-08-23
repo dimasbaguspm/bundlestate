@@ -1,27 +1,23 @@
-import { useEffect, useMemo, useState } from "react";
-import { Navigate, useParams } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Navigate, NavLink, Outlet, useParams } from "react-router-dom";
 import { FileArchive } from "lucide-react";
 import { clsx } from "clsx";
 import { Badge, btn, btnActive, CopyButton, Spinner } from "@/components/ui";
-import { TreemapTab } from "@/modules/treemap/ui/treemap-tab";
-import { FilesTab } from "@/modules/files/ui/files-tab";
-import { PreviewTab } from "@/modules/preview/ui/preview-tab";
-import { InspectorTab } from "@/modules/inspector/ui/inspector-tab";
-import { WhatIfTab } from "@/modules/whatif/ui/whatif-tab";
-import { DiffTab } from "@/modules/diff/ui/diff-tab";
 import { loadReport } from "@/db";
 import { buildMarkdownReport } from "@/utils/report-markdown";
 import { useBundleStore } from "@/core/stores/store";
 import type { BundleStateReport } from "@/utils/types";
 
-type Tab = "treemap" | "files" | "preview" | "inspector" | "whatif" | "diff";
+/** Context the tab routes consume. */
+export type ReportContext = BundleStateReport;
 
 /**
  * Detail page at `/r/:reportId`. Prefers the in-memory zustand copy (fresh
  * analysis) and falls back to IndexedDB so a refresh shows the same report.
- * Unknown ids redirect home with a banner. Header holds three tabs —
- * Treemap / List / Files — each full width/height with its own filter, plus
- * a Copy button that generates a PR-ready Markdown report.
+ * Unknown ids redirect home with a banner. The header holds the view tabs as
+ * real routes (`/r/:id/:tab`), so each tab is deep-linkable and the browser
+ * back/forward buttons work. A Copy button generates a PR-ready Markdown
+ * report. Tabs receive the resolved report through the Outlet context.
  */
 export function ReportPage() {
   const { id } = useParams<{ id: string }>();
@@ -29,9 +25,6 @@ export function ReportPage() {
   const storeReport = useBundleStore((state) => state.reports[reportId]);
   const [persisted, setPersisted] = useState<BundleStateReport | null | undefined>(undefined);
   const [missing, setMissing] = useState(false);
-  const [tab, setTab] = useState<Tab>("treemap");
-  const [treemapFilter, setTreemapFilter] = useState("");
-  const [filesFilter, setFilesFilter] = useState("");
 
   // Resolve the report: store copy first, then IndexedDB.
   useEffect(() => {
@@ -56,7 +49,7 @@ export function ReportPage() {
     if (report) useBundleStore.getState().setActiveReport(report.id);
   }, [report]);
 
-  const markdown = useMemo(() => (report ? buildMarkdownReport(report) : ""), [report]);
+  const markdown = report ? buildMarkdownReport(report) : "";
 
   if (missing) return <Navigate to="/" replace state={{ missingReport: reportId }} />;
 
@@ -68,63 +61,58 @@ export function ReportPage() {
     );
   }
 
-  const tabs: { id: Tab; label: string }[] = [
+  const tabs = [
     { id: "treemap", label: "Treemap" },
     { id: "files", label: "Files" },
     { id: "preview", label: "Preview" },
     { id: "inspector", label: "Inspector" },
-    { id: "whatif", label: "What-If" },
     { id: "diff", label: "Diff" },
   ];
 
   return (
     <div className="flex min-h-0 flex-1 flex-col" aria-label={`Report for ${report.sourceName}`}>
-      <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-edge px-4 py-2">
-        <FileArchive size={16} className="text-ink" aria-hidden />
-        <h2 className="max-w-[20ch] truncate font-mono text-sm font-semibold text-ink">
-          {report.sourceName}
-        </h2>
-        <Badge tone="accent">{report.assets.length} assets</Badge>
-        <Badge tone="neutral">{report.packages.length} pkgs</Badge>
-        <Badge tone="neutral">
-          {report.insights.gzipRatio === null
-            ? "gzip —"
-            : `gzip ${(report.insights.gzipRatio * 100).toFixed(1)}%`}
-        </Badge>
-        <div className="ml-auto flex items-center gap-2">
+      <div className="flex flex-col gap-2 border-b border-edge px-3 py-2 sm:flex-row sm:items-center sm:gap-3">
+        <div className="flex min-w-0 items-center gap-2">
+          <FileArchive size={16} className="shrink-0 text-ink" aria-hidden />
+          <h2 className="max-w-[24ch] truncate font-mono text-sm font-semibold text-ink">
+            {report.sourceName}
+          </h2>
+          <Badge tone="accent">{report.assets.length} assets</Badge>
+          <Badge tone="neutral">{report.packages.length} pkgs</Badge>
+          <Badge tone="neutral">
+            {report.insights.gzipRatio === null
+              ? "gzip —"
+              : `gzip ${(report.insights.gzipRatio * 100).toFixed(1)}%`}
+          </Badge>
+        </div>
+        <div className="flex items-center gap-2 sm:ml-auto">
           <CopyButton value={markdown} label="Copy report" className="px-2.5 py-1 text-xs" />
-          <div
-            role="tablist"
+          <nav
             aria-label="Report views"
-            className="flex items-center rounded-lg border border-edge bg-surface-2 p-0.5"
+            className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto rounded-lg border border-edge bg-surface-2 p-0.5 sm:flex-none"
           >
             {tabs.map((t) => (
-              <button
+              <NavLink
                 key={t.id}
-                type="button"
+                to={t.id}
                 role="tab"
-                aria-selected={tab === t.id}
-                className={clsx(btn, "px-2.5 py-1 text-xs", tab === t.id && btnActive)}
-                onClick={() => setTab(t.id)}
+                className={({ isActive }) =>
+                  clsx(
+                    btn,
+                    "whitespace-nowrap px-2.5 py-1.5 text-xs min-h-[36px] min-w-[44px] flex-1 sm:flex-none",
+                    isActive && btnActive,
+                  )
+                }
               >
                 {t.label}
-              </button>
+              </NavLink>
             ))}
-          </div>
+          </nav>
         </div>
       </div>
 
       <div className="relative flex min-h-0 flex-1 flex-col">
-        {tab === "treemap" && (
-          <TreemapTab report={report} filter={treemapFilter} onFilter={setTreemapFilter} />
-        )}
-        {tab === "files" && (
-          <FilesTab report={report} filter={filesFilter} onFilter={setFilesFilter} />
-        )}
-        {tab === "preview" && <PreviewTab report={report} />}
-        {tab === "inspector" && <InspectorTab report={report} />}
-        {tab === "whatif" && <WhatIfTab report={report} />}
-        {tab === "diff" && <DiffTab report={report} />}
+        <Outlet context={report} />
       </div>
     </div>
   );

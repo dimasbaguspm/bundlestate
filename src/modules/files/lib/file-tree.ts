@@ -10,6 +10,8 @@ export interface FileTreeNode {
   isFile: boolean;
   /** Child directories + files, sorted dirs-first then alphabetical. */
   children: FileTreeNode[];
+  /** Aggregated byte size (files: own size; dirs: sum of descendants). */
+  bytes: number;
   /** Present for file leaves: the originating static file (may lack content). */
   staticFile?: StaticFile;
   /** Present for asset leaves: the asset name + kind + base64 source. */
@@ -23,7 +25,7 @@ export interface FileTreeNode {
  * captured content when present, otherwise metadata only).
  */
 export function buildFileTree(report: BundleStateReport): FileTreeNode {
-  const root: FileTreeNode = { path: "", name: "", isFile: false, children: [] };
+  const root: FileTreeNode = { path: "", name: "", isFile: false, children: [], bytes: 0 };
 
   const ensureDir = (parts: string[]): FileTreeNode => {
     let node = root;
@@ -32,7 +34,7 @@ export function buildFileTree(report: BundleStateReport): FileTreeNode {
       acc = acc ? `${acc}/${part}` : part;
       let next = node.children.find((c) => !c.isFile && c.name === part);
       if (!next) {
-        next = { path: acc, name: part, isFile: false, children: [] };
+        next = { path: acc, name: part, isFile: false, children: [], bytes: 0 };
         node.children.push(next);
       }
       node = next;
@@ -53,6 +55,7 @@ export function buildFileTree(report: BundleStateReport): FileTreeNode {
       name: f.path.split("/").pop() ?? f.path,
       isFile: true,
       children: [],
+      bytes: f.sizeBytes,
       staticFile: f,
     });
   }
@@ -64,9 +67,20 @@ export function buildFileTree(report: BundleStateReport): FileTreeNode {
       name: a.name.split("/").pop() ?? a.name,
       isFile: true,
       children: [],
+      bytes: a.sizeBytes,
       asset: { name: a.name, kind: a.kind, rawBytes: a.rawBytes, sizeBytes: a.sizeBytes },
     });
   }
+
+  // Aggregate directory sizes from their descendants.
+  const sumBytes = (node: FileTreeNode): number => {
+    if (node.isFile) return node.bytes;
+    let total = 0;
+    for (const c of node.children) total += sumBytes(c);
+    node.bytes = total;
+    return total;
+  };
+  sumBytes(root);
 
   sortTree(root);
   return root;

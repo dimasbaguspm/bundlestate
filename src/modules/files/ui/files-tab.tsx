@@ -1,4 +1,6 @@
 import { lazy, useMemo, useState, Suspense } from "react";
+import { useOutletContext } from "react-router-dom";
+import { clsx } from "clsx";
 import { FileSearch, Binary } from "lucide-react";
 import { buildFileTree, countFiles, type FileTreeNode } from "@/modules/files/lib/file-tree";
 import { FileTree } from "./file-tree";
@@ -62,16 +64,21 @@ function langFor(path: string): string {
 }
 
 /** Files tab: directory browser (left) + Monaco raw/binary preview (right). */
-export function FilesTab({
-  report,
-  filter,
-  onFilter,
-}: {
-  report: BundleStateReport;
-  filter: string;
-  onFilter: (value: string) => void;
-}) {
-  const tree = useMemo(() => buildFileTree(report), [report]);
+export function FilesTab() {
+  const report = useOutletContext<BundleStateReport>();
+  const [filter, setFilter] = useState("");
+  const [sortBySize, setSortBySize] = useState(false);
+  const baseTree = useMemo(() => buildFileTree(report), [report]);
+  const tree = useMemo(() => {
+    if (!sortBySize) return baseTree;
+    const clone = structuredClone(baseTree);
+    const sortRec = (n: FileTreeNode) => {
+      n.children.sort((a, b) => b.bytes - a.bytes);
+      n.children.forEach(sortRec);
+    };
+    sortRec(clone);
+    return clone;
+  }, [baseTree, sortBySize]);
   const [selected, setSelected] = useState<FileTreeNode | null>(null);
 
   const fileCount = useMemo(() => countFiles(tree), [tree]);
@@ -114,7 +121,20 @@ export function FilesTab({
   return (
     <div className="flex min-h-0 w-full flex-1 flex-col gap-2 p-2">
       <div className="flex flex-wrap items-center gap-2">
-        <FilterInput value={filter} onChange={onFilter} placeholder="Filter files…" />
+        <FilterInput value={filter} onChange={setFilter} placeholder="Filter files…" />
+        <button
+          type="button"
+          onClick={() => setSortBySize((v) => !v)}
+          aria-pressed={sortBySize}
+          className={clsx(
+            "rounded border px-2 py-1 text-[11px]",
+            sortBySize
+              ? "border-accent/60 bg-accent/10 text-accent"
+              : "border-edge bg-surface-2 text-dim hover:text-ink",
+          )}
+        >
+          {sortBySize ? "Size ↓" : "Size"}
+        </button>
         <span className="text-[11px] uppercase tracking-wide text-faint">{fileCount} files</span>
       </div>
 

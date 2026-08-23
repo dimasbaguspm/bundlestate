@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useOutletContext } from "react-router-dom";
 import { RotateCw, ShieldAlert, Activity, FileCode2, Plus, X } from "lucide-react";
 import { btn, btnActive, btnPrimary, inputCls } from "@/components/ui";
 import {
@@ -18,7 +19,8 @@ const ENV_PRESETS: Record<string, Record<string, string>> = {
 };
 
 /** Preview Sandbox tab (PRD §4.6): render a dropped bundle in an isolated iframe. */
-export function PreviewTab({ report }: { report: BundleStateReport }) {
+export function PreviewTab() {
+  const report = useOutletContext<BundleStateReport>();
   const jsAssets = useMemo(
     () => report.assets.filter((a) => a.kind === "js" && a.rawBytes),
     [report],
@@ -195,7 +197,7 @@ export function PreviewTab({ report }: { report: BundleStateReport }) {
           <iframe
             ref={iframeRef}
             title="Bundle preview sandbox"
-            sandbox="allow-scripts"
+            sandbox="allow-scripts allow-same-origin"
             srcDoc={srcDoc}
             className="min-h-0 flex-1 w-full rounded-lg border border-edge bg-white"
           />

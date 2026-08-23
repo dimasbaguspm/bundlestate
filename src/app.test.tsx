@@ -56,6 +56,6 @@ describe("App", () => {
     options.onDone(report.id);
 
     expect(await screen.findByLabelText("Report for nav.zip")).toBeInTheDocument();
-    expect(window.location.pathname).toBe("/r/r-nav");
+    expect(window.location.pathname).toBe("/r/r-nav/treemap");
   });
 });

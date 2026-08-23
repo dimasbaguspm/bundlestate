@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useOutletContext } from "react-router-dom";
 import { AlertTriangle, ShieldCheck } from "lucide-react";
 import { Badge } from "@/components/ui";
 import { runInspector, type RuleFinding, type Severity } from "@/utils/rules";
@@ -23,7 +24,8 @@ const SEV_LABEL: Record<Severity, string> = {
 /** Inspector tab (PRD §4.3 + §4.4): anti-pattern findings, a dependency-graph
  * visualization, and a circular-dependency warning/flag (cycles folded in
  * from the old Cycles tab). */
-export function InspectorTab({ report }: { report: BundleStateReport }) {
+export function InspectorTab() {
+  const report = useOutletContext<BundleStateReport>();
   const findings = useMemo(
     () =>
       runInspector({
@@ -91,9 +93,12 @@ export function InspectorTab({ report }: { report: BundleStateReport }) {
         <div className="flex items-center justify-between border-b border-edge px-3 py-1.5">
           <span className="text-[11px] uppercase tracking-wide text-dim">
             Import dependency graph
+            {!report.moduleGraph?.hasContents && (
+              <span className="ml-1 text-faint">(packages · no source maps)</span>
+            )}
           </span>
           <span className="text-[11px] tabular-nums text-faint">
-            {report.moduleGraph?.nodes.length ?? 0} nodes · {edges.length} edges
+            {report.moduleGraph?.nodes.length ?? 0} module nodes · {edges.length} edges
           </span>
         </div>
         <div className="h-[460px] p-2">
@@ -155,36 +160,38 @@ export function InspectorTab({ report }: { report: BundleStateReport }) {
           {findings.length === 0 && <span className="text-[11px] text-faint">none</span>}
         </div>
         {findings.length > 0 && (
-          <table className="w-full border-collapse text-sm">
-            <thead className="sticky top-0 bg-surface-2 text-left text-[11px] uppercase tracking-wide text-dim">
-              <tr>
-                <th className="px-3 py-2 font-semibold">Rule</th>
-                <th className="px-3 py-2 font-semibold">Severity</th>
-                <th className="px-3 py-2 font-semibold">Issue</th>
-                <th className="px-3 py-2 font-semibold">Location</th>
-              </tr>
-            </thead>
-            <tbody>
-              {findings.map((f: RuleFinding, i) => (
-                <tr key={`${f.rule}-${i}`} className="border-t border-edge hover:bg-surface-2">
-                  <td className="px-3 py-2 font-mono text-[12px] text-accent">{f.rule}</td>
-                  <td className="px-3 py-2">
-                    <Badge tone={SEV_TONE[f.severity]}>{SEV_LABEL[f.severity]}</Badge>
-                  </td>
-                  <td className="px-3 py-2">
-                    <div className="font-medium text-ink">{f.title}</div>
-                    <div className="mt-0.5 text-[12px] text-dim">{f.detail}</div>
-                    {f.evidence && (
-                      <pre className="mt-1 overflow-x-auto rounded bg-surface-2 px-2 py-1 font-mono text-[11px] text-faint">
-                        {f.evidence}
-                      </pre>
-                    )}
-                  </td>
-                  <td className="px-3 py-2 font-mono text-[12px] text-dim">{f.location}</td>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[520px] border-collapse text-sm">
+              <thead className="sticky top-0 bg-surface-2 text-left text-[11px] uppercase tracking-wide text-dim">
+                <tr>
+                  <th className="px-3 py-2 font-semibold">Rule</th>
+                  <th className="px-3 py-2 font-semibold">Severity</th>
+                  <th className="px-3 py-2 font-semibold">Issue</th>
+                  <th className="px-3 py-2 font-semibold">Location</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {findings.map((f: RuleFinding, i) => (
+                  <tr key={`${f.rule}-${i}`} className="border-t border-edge hover:bg-surface-2">
+                    <td className="px-3 py-2 font-mono text-[12px] text-accent">{f.rule}</td>
+                    <td className="px-3 py-2">
+                      <Badge tone={SEV_TONE[f.severity]}>{SEV_LABEL[f.severity]}</Badge>
+                    </td>
+                    <td className="px-3 py-2">
+                      <div className="font-medium text-ink">{f.title}</div>
+                      <div className="mt-0.5 text-[12px] text-dim">{f.detail}</div>
+                      {f.evidence && (
+                        <pre className="mt-1 overflow-x-auto rounded bg-surface-2 px-2 py-1 font-mono text-[11px] text-faint">
+                          {f.evidence}
+                        </pre>
+                      )}
+                    </td>
+                    <td className="px-3 py-2 font-mono text-[12px] text-dim">{f.location}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </div>
