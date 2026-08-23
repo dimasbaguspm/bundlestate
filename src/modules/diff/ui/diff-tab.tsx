@@ -1,4 +1,5 @@
 import { useMemo, useEffect, useState } from "react";
+import { useOutletContext } from "react-router-dom";
 import { GitCompare } from "lucide-react";
 import { Badge } from "@/components/ui";
 import { diffReports, type PackageDelta } from "@/modules/diff/lib/diff";
@@ -8,7 +9,8 @@ import { loadAllReports } from "@/db";
 import type { BundleStateReport } from "@/utils/types";
 
 /** Multi-report diff (PRD §4.5.2). */
-export function DiffTab({ report }: { report: BundleStateReport }) {
+export function DiffTab() {
+  const report = useOutletContext<BundleStateReport>();
   const reportsMap = useBundleStore((s) => s.reports);
   const [dbReports, setDbReports] = useState<BundleStateReport[]>([]);
 
