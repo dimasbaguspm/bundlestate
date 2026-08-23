@@ -7,7 +7,6 @@ import { TreemapTab } from "@/components/treemap-tab";
 import { FilesTab } from "@/components/files-tab";
 import { PreviewTab } from "@/components/preview-tab";
 import { InspectorTab } from "@/components/inspector-tab";
-import { CyclesTab } from "@/components/cycles-tab";
 import { WhatIfTab } from "@/components/whatif-tab";
 import { DiffTab } from "@/components/diff-tab";
 import { loadReport } from "@/db";
@@ -15,7 +14,7 @@ import { buildMarkdownReport } from "@/lib/reportMarkdown";
 import { useBundleStore } from "@/state/store";
 import type { BundleStateReport } from "@/lib/types";
 
-type Tab = "treemap" | "files" | "preview" | "inspector" | "cycles" | "whatif" | "diff";
+type Tab = "treemap" | "files" | "preview" | "inspector" | "whatif" | "diff";
 
 /**
  * Detail page at `/r/:reportId`. Prefers the in-memory zustand copy (fresh
@@ -74,7 +73,6 @@ export function ReportPage() {
     { id: "files", label: "Files" },
     { id: "preview", label: "Preview" },
     { id: "inspector", label: "Inspector" },
-    { id: "cycles", label: "Cycles" },
     { id: "whatif", label: "What-If" },
     { id: "diff", label: "Diff" },
   ];
@@ -125,7 +123,6 @@ export function ReportPage() {
         )}
         {tab === "preview" && <PreviewTab report={report} />}
         {tab === "inspector" && <InspectorTab report={report} />}
-        {tab === "cycles" && <CyclesTab report={report} />}
         {tab === "whatif" && <WhatIfTab report={report} />}
         {tab === "diff" && <DiffTab report={report} />}
       </div>
