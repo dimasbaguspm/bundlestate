@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
-# --- Build stage ---------------------------------------------------------
-FROM node:24-alpine AS build
+# --- Frontend build stage ----------------------------------------------
+FROM node:24-alpine AS fe-build
 WORKDIR /app
 
 COPY package.json pnpm-lock.yaml ./
@@ -20,46 +20,31 @@ ENV VITE_SITE_URL=$VITE_SITE_URL
 
 RUN pnpm build
 
-# --- Serve stage ---------------------------------------------------------
-FROM nginx:1.27-alpine
+# --- Go deploy binary build stage --------------------------------------
+FROM golang:1.23-alpine AS go-build
+WORKDIR /src
+# Cache module downloads
+COPY deploy/go.mod deploy/go.sum* ./
+RUN cd deploy && go mod download 2>/dev/null || true
+COPY deploy/ ./
+# Build a static binary that serves the SPA on :80 with catch-all routing.
+RUN CGO_ENABLED=0 GOOS=linux go build -o /out/bundlestate-server ./cmd/bundlestate-server
 
-# SPA nginx config (no separate file in the repo)
-COPY <<'EOF' /etc/nginx/conf.d/default.conf
-server {
-    listen 80;
-    server_name _;
+# --- Serve stage --------------------------------------------------------
+FROM alpine:3.20
 
-    root /usr/share/nginx/html;
-    index index.html;
+# ca-certs for any outbound TLS the server may do; wget for the healthcheck.
+RUN apk add --no-cache wget ca-certificates
 
-    location / {
-        try_files $uri $uri/ /index.html;
-    }
-
-    # Hashed build assets: cache aggressively
-    location /assets/ {
-        expires 1y;
-        add_header Cache-Control "public, immutable";
-    }
-
-    gzip on;
-    gzip_vary on;
-    gzip_min_length 1024;
-    gzip_types
-        text/plain
-        text/css
-        application/javascript
-        application/json
-        image/svg+xml
-        image/x-icon;
-}
-EOF
-
-COPY --from=build /app/dist /usr/share/nginx/html
+WORKDIR /app
+COPY --from=fe-build /app/dist /app/dist
+COPY --from=go-build /out/bundlestate-server /usr/local/bin/bundlestate-server
 
 EXPOSE 80
 
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD wget -q -O - http://127.0.0.1/ >/dev/null || exit 1
+  CMD wget -q -O - http://127.0.0.1:80/healthz >/dev/null || exit 1
 
-CMD ["nginx", "-g", "daemon off;"]
+# The Golang binary serves the SPA (catch-all routing for client-side routes)
+# and listens on port 80.
+CMD ["bundlestate-server", "serve", "--addr", ":80", "--dir", "/app/dist"]

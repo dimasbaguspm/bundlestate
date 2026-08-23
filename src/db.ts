@@ -1,5 +1,5 @@
 import Dexie, { type Table } from "dexie";
-import type { BundleStateReport } from "@/lib/types";
+import type { BundleStateReport } from "@/utils/types";
 
 export interface StoredReport {
   id: string;

@@ -3,16 +3,16 @@ import { Navigate, useParams } from "react-router-dom";
 import { FileArchive } from "lucide-react";
 import { clsx } from "clsx";
 import { Badge, btn, btnActive, CopyButton, Spinner } from "@/components/ui";
-import { TreemapTab } from "@/features/treemap/treemap-tab";
-import { FilesTab } from "@/features/files/files-tab";
-import { PreviewTab } from "@/features/preview/preview-tab";
-import { InspectorTab } from "@/features/inspector/inspector-tab";
-import { WhatIfTab } from "@/features/whatif/whatif-tab";
-import { DiffTab } from "@/features/diff/diff-tab";
+import { TreemapTab } from "@/modules/treemap/ui/treemap-tab";
+import { FilesTab } from "@/modules/files/ui/files-tab";
+import { PreviewTab } from "@/modules/preview/ui/preview-tab";
+import { InspectorTab } from "@/modules/inspector/ui/inspector-tab";
+import { WhatIfTab } from "@/modules/whatif/ui/whatif-tab";
+import { DiffTab } from "@/modules/diff/ui/diff-tab";
 import { loadReport } from "@/db";
-import { buildMarkdownReport } from "@/lib/reportMarkdown";
-import { useBundleStore } from "@/state/store";
-import type { BundleStateReport } from "@/lib/types";
+import { buildMarkdownReport } from "@/utils/report-markdown";
+import { useBundleStore } from "@/core/stores/store";
+import type { BundleStateReport } from "@/utils/types";
 
 type Tab = "treemap" | "files" | "preview" | "inspector" | "whatif" | "diff";
 

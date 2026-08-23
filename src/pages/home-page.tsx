@@ -1,10 +1,10 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import { useShallow } from "zustand/react/shallow";
-import { Dropzone } from "@/components/Dropzone";
-import { JobsPanel } from "@/components/JobsPanel";
+import { Dropzone } from "@/components/dropzone";
+import { JobsPanel } from "@/components/jobs-panel";
 import { ErrorBanner } from "@/components/ui";
-import { runParseJob } from "@/state/runJob";
-import { useBundleStore } from "@/state/store";
+import { runParseJob } from "@/core/stores/run-job";
+import { useBundleStore } from "@/core/stores/store";
 
 /**
  * Landing page: a full-height, full-width dropzone that owns the whole
@@ -27,7 +27,9 @@ export function HomePage() {
   return (
     <div className="flex min-h-0 w-full flex-1 flex-col gap-3 px-4 py-4">
       {missingReport && (
-        <ErrorBanner message={`Report “${missingReport}” was not found — it may have been removed.`} />
+        <ErrorBanner
+          message={`Report “${missingReport}” was not found — it may have been removed.`}
+        />
       )}
       <Dropzone onFiles={handleFiles} />
       {jobs.length > 0 && <JobsPanel jobs={jobs} />}

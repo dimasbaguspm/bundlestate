@@ -1,4 +1,4 @@
-import type { BundleStateReport } from "@/lib/types";
+import type { BundleStateReport } from "@/utils/types";
 
 /** Minimal but realistic report for tests — mirrors store.test.ts shape. */
 export function makeReport(id: string, sourceName = "demo.zip"): BundleStateReport {
@@ -6,7 +6,16 @@ export function makeReport(id: string, sourceName = "demo.zip"): BundleStateRepo
     id,
     sourceName,
     generatedAt: new Date().toISOString(),
-    assets: [{ name: "a.js", sizeBytes: 100, gzipBytes: 40, usedModules: ["react"], rawBytes: "", kind: "js" }],
+    assets: [
+      {
+        name: "a.js",
+        sizeBytes: 100,
+        gzipBytes: 40,
+        usedModules: ["react"],
+        rawBytes: "",
+        kind: "js",
+      },
+    ],
     packages: [
       {
         name: "react",

@@ -1,4 +1,4 @@
-import type { UntarEntry } from "@/lib/tar";
+import type { UntarEntry } from "@/utils/tar";
 
 /**
  * Minimal in-memory ustar tar writer for tests — no binary fixtures, no
@@ -29,7 +29,12 @@ function tarHeader(name: string, size: number, type: number): Uint8Array {
   writeString(block, 257, 6, "ustar ");
   writeString(block, 263, 2, "00");
   block.fill(0x20, 148, 156);
-  writeOctal(block, 148, 8, block.reduce((sum, b) => sum + b, 0));
+  writeOctal(
+    block,
+    148,
+    8,
+    block.reduce((sum, b) => sum + b, 0),
+  );
   return block;
 }
 
@@ -71,10 +76,7 @@ export interface TarFixtureFile {
  * Options: `dirs` emits a directory header before each file's parent dir,
  * mirroring how real tarballs (npm) are laid out.
  */
-export function buildTar(
-  files: TarFixtureFile[],
-  options: { dirs?: string[] } = {},
-): Uint8Array {
+export function buildTar(files: TarFixtureFile[], options: { dirs?: string[] } = {}): Uint8Array {
   const blocks: Uint8Array[] = [];
   for (const dir of options.dirs ?? []) {
     blocks.push(tarHeader(dir.endsWith("/") ? dir : `${dir}/`, 0, 0x35)); // '5'
