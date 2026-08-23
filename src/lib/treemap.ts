@@ -1,4 +1,10 @@
-import { hierarchy, treemap, type HierarchyNode, type HierarchyRectangularNode } from "d3-hierarchy";
+import {
+  hierarchy,
+  treemap,
+  treemapSquarify,
+  type HierarchyNode,
+  type HierarchyRectangularNode,
+} from "d3-hierarchy";
 import type { BundleStateReport } from "./types";
 
 /** A rendered treemap rectangle (asset at depth 1, package at depth 2). */
@@ -60,7 +66,12 @@ export function layoutTreemap(
   const root = hierarchy<Datum>(buildTreemapData(report, query));
   root.sum((d) => d.value).sort((a, b) => (b.value ?? 0) - (a.value ?? 0));
 
-  treemap<Datum>().size([width, height]).paddingInner(1).paddingOuter(2).round(true)(root);
+  treemap<Datum>()
+    .tile(treemapSquarify.ratio(1))
+    .size([width, height])
+    .paddingInner(1)
+    .paddingOuter(2)
+    .round(true)(root);
 
   const rects: TreemapRect[] = [];
   root.each((node: HierarchyNode<Datum>) => {
