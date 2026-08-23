@@ -2,14 +2,18 @@
  * In-browser Preview Sandbox plumbing (PRD §4.6).
  *
  * Builds an isolated iframe document (via `srcdoc`) that executes a dropped
- * bundle asset, captures its console output + runtime errors through a
- * postMessage bridge, and lets the host inject environment variables and DOM
- * mount points before mount.
+ * bundle, captures its console output + runtime errors through a postMessage
+ * bridge, and lets the host inject environment variables and a DOM mount
+ * point before mount.
+ *
+ * Entry model (MR 4/7): the user picks an ENTRY asset —
+ *   - an HTML asset is rendered as-is, with the chosen JS assets injected as
+ *     <script> tags (so a real app entry like index.html boots in the sandbox);
+ *   - a JS asset is run inside a generated skeleton document with a mount node.
  *
  * §4.6.3 hardening:
  *  - Network interception: `fetch`/`XMLHttpRequest` are shimmed to block real
- *    egress (the sandbox cannot phone home) and every attempt is reported to
- *    the host so the user sees what the bundle *tried* to do.
+ *    egress (the sandbox cannot phone home) and every attempt is reported.
  *  - Execution profiler: mount time, long tasks, resource timing, error/console
  *    counts are captured and reported as a single profile summary.
  */
@@ -44,6 +48,15 @@ export interface PreviewEnv {
   mount: string;
   /** When true (default) the sandbox blocks + records all network egress. */
   interceptNetwork?: boolean;
+}
+
+export interface PreviewInput {
+  /** Entry HTML document source (when the user picks an HTML asset). */
+  html?: string;
+  /** JS asset sources to inject (as <script type=module> tags). */
+  jsAssets: string[];
+  /** Changeable environment (vars + mount + network toggle). */
+  env: PreviewEnv;
 }
 
 const BRIDGE = `
@@ -87,7 +100,6 @@ const BRIDGE = `
       var url = (input && input.url) ? input.url : (typeof input === 'string' ? input : String(input));
       var method = (init && init.method) ? init.method : (input && input.method ? input.method : 'GET');
       recordNet(method || 'GET', url);
-      // Block real egress: resolve a synthetic failure.
       return Promise.reject(new TypeError('[sandbox] network request blocked: ' + url));
     };
     var RealXHR = window.XMLHttpRequest;
@@ -98,10 +110,6 @@ const BRIDGE = `
         xhr.open = function (m, u) { recordNet(m || 'GET', u); return origOpen(m, u); };
         var origSend = xhr.send.bind(xhr);
         xhr.send = function () { try { Object.defineProperty(xhr, 'status', { get: function(){return 0;} }); } catch(e){} return origSend.apply(null, arguments); };
-        ['onreadystatechange','onload','onerror','ontimeout'].forEach(function (ev) {
-          var key = 'on' + ev.slice(2);
-          xhr.addEventListener(ev, function () { if (ev === 'onerror' || ev === 'onload') {} });
-        });
         return xhr;
       };
     }
@@ -120,7 +128,6 @@ const BRIDGE = `
   window.__bsMountStart = performance.now();
   parent.postMessage({ __bsPreview: true, level: 'log', text: '[sandbox] bundle mounted', at: Date.now() }, '*');
 
-  // Emit the profile summary once the bundle has had time to settle.
   window.__bsEmitProfile = function () {
     var mountMs = Math.round((performance.now() - window.__bsMountStart) * 100) / 100;
     var resources = 0;
@@ -149,21 +156,24 @@ export function decodeAsset(rawBytes: string): string {
     for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
     return new TextDecoder().decode(out);
   }
-  // Node fallback (tests / SSR)
   return Buffer.from(rawBytes, "base64").toString("utf-8");
 }
 
 /**
- * Compose the iframe `srcdoc`. Injects the console/network/profiler bridge, a
- * mount node, the env shim (import.meta.env + process.env), and finally the
- * asset source.
+ * Compose the iframe `srcdoc`.
+ *
+ * - When `html` is provided (the user picked an HTML entry), it is served as
+ *   the document and the chosen JS assets are injected as <script type=module>
+ *   tags before </body>, so a real app entry boots inside the sandbox.
+ * - Otherwise a minimal skeleton document with a mount node is generated and
+ *   the first JS asset is executed (legacy single-asset mode).
+ *
+ * The bridge, env shim, and network/profiler hardening are always injected.
  */
-export function buildSrcDoc(source: string, env: PreviewEnv): string {
-  const varsJson = JSON.stringify(env.vars ?? {});
+export function buildSrcDoc(input: PreviewInput): string {
+  const { html, jsAssets, env } = input;
   const intercept = env.interceptNetwork !== false;
-  const mountId = env.mount?.trim()
-    ? env.mount.trim().replace(/^#/, "")
-    : "bs-root";
+  const varsJson = JSON.stringify(env.vars ?? {});
 
   const envShim = `
 <script>
@@ -177,13 +187,40 @@ export function buildSrcDoc(source: string, env: PreviewEnv): string {
   })();
 </script>`;
 
-  const mountHtml = `<div id="${mountId}"></div>`;
+  const jsTags = jsAssets
+    .map((src) => `<script type="module">\n${src}\n</script>`)
+    .join("\n");
 
+  const bridgeWithFlag = BRIDGE.replace("__BS_INTERCEPT__", String(intercept));
+
+  if (html && html.trim()) {
+    // Inject bridge + env shim into <head>, and the JS assets before </body>.
+    let doc = html;
+    if (/<\/head>/i.test(doc)) {
+      doc = doc.replace(/<\/head>/i, `${bridgeWithFlag}${envShim}</head>`);
+    } else if (/<head[^>]*>/i.test(doc)) {
+      doc = doc.replace(/<head[^>]*>/i, `$&${bridgeWithFlag}${envShim}`);
+    } else {
+      doc = `${bridgeWithFlag}${envShim}${doc}`;
+    }
+    if (/<\/body>/i.test(doc)) {
+      doc = doc.replace(/<\/body>/i, `${jsTags}\n</body>`);
+    } else {
+      doc = `${doc}\n${jsTags}`;
+    }
+    return doc;
+  }
+
+  // Legacy single-asset skeleton mode.
+  const mountId = env.mount?.trim()
+    ? env.mount.trim().replace(/^#/, "")
+    : "bs-root";
+  const single = jsAssets[0] ?? "";
+  const mountHtml = `<div id="${mountId}"></div>`;
   const runner = `
 <script>
   (function () {
-    var src = ${JSON.stringify(source)};
-    var mount = document.getElementById(${JSON.stringify(mountId)});
+    var src = ${JSON.stringify(single)};
     try {
       var blob = new Blob([src], { type: 'text/javascript' });
       var url = URL.createObjectURL(blob);
@@ -196,6 +233,5 @@ export function buildSrcDoc(source: string, env: PreviewEnv): string {
     }
   })();
 </script>`;
-
-  return `<!doctype html><html><head><meta charset="utf-8"><style>body{font-family:system-ui,sans-serif;margin:0;padding:8px}#${mountId}{min-height:40px}</style>${BRIDGE.replace("__BS_INTERCEPT__", String(intercept))}${envShim}</head><body>${mountHtml}${runner}</body></html>`;
+  return `<!doctype html><html><head><meta charset="utf-8"><style>body{font-family:system-ui,sans-serif;margin:0;padding:8px}#${mountId}{min-height:40px}</style>${bridgeWithFlag}${envShim}</head><body>${mountHtml}${runner}</body></html>`;
 }
