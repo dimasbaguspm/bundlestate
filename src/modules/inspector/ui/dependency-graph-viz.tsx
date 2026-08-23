@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
-import { AlertTriangle, ZoomIn, ZoomOut, Maximize } from "lucide-react";
+import { AlertTriangle, ArrowRight, ZoomIn, ZoomOut, Maximize } from "lucide-react";
 import { layoutDependencyGraph } from "@/modules/inspector/lib/dep-graph-layout";
 import { buildPackageGraph } from "@/modules/inspector/lib/dependency-graph";
 import type { BundleStateReport } from "@/utils/types";
+
+export type GraphView = "file" | "flow";
 
 interface PanState {
   k: number;
@@ -12,17 +14,25 @@ interface PanState {
 
 const BASE_W = 900;
 const BASE_H = 560;
+/** Hard cap so the synchronous force layout can never freeze a mobile tab. */
+const FILE_NODE_CAP = 160;
 
 /**
- * Import-flow graph. Each node is a file/module; each directed edge is a JS
- * `import` (`from → to`). Arrowheads show the direction, so a cycle like
- * `a.js → b.js → a.js` reads clearly. Source maps with `sourcesContent`
- * drive the file-level view; without them it falls back to the package graph
- * from the lockfile. Cycles are highlighted in rose with a legend. Wheel /
- * drag / buttons navigate; the SVG fills its container and scales up on
- * small screens so nodes and labels stay legible.
+ * Import-flow visualization with two views:
+ * - `file`: a force-directed graph where each node is a file/module and each
+ *   directed edge is a JS `import` (arrowheads). Node count is capped so the
+ *   layout stays responsive on mobile; a note shows when it's truncated.
+ * - `flow`: an edge-to-edge list of directed imports (`a.js → b.js`) with no
+ *   node "atoms" — the lightweight, mobile-safe way to read import flow and
+ *   spot cycles (highlighted in rose).
  */
-export function DependencyGraphViz({ report }: { report: BundleStateReport }) {
+export function DependencyGraphViz({
+  report,
+  view = "file",
+}: {
+  report: BundleStateReport;
+  view?: GraphView;
+}) {
   const ref = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const [size, setSize] = useState<{ w: number; h: number }>({ w: 0, h: 0 });
@@ -41,20 +51,40 @@ export function DependencyGraphViz({ report }: { report: BundleStateReport }) {
 
   useEffect(() => {
     setPan({ k: 1, x: 0, y: 0 });
-  }, [report.id]);
+  }, [report.id, view]);
 
-  const { nodes, links, cycleCount } = useMemo(() => {
+  const { nodes, links, totalNodes } = useMemo(() => {
     const modNodes = report.moduleGraph?.nodes ?? [];
     const modEdges = report.moduleGraph?.edges ?? [];
-    if (modNodes.length > 0) {
+    const total = modNodes.length;
+    let finalNodes = modNodes;
+    let finalEdges = modEdges;
+    if (modNodes.length > FILE_NODE_CAP) {
+      // Keep the highest-degree nodes so the densest import hubs stay visible.
+      const deg = new Map<string, number>();
+      for (const [from, to] of modEdges) {
+        deg.set(from, (deg.get(from) ?? 0) + 1);
+        deg.set(to, (deg.get(to) ?? 0) + 1);
+      }
+      const top = new Set(
+        [...modNodes]
+          .sort((a, b) => (deg.get(b.id) ?? 0) - (deg.get(a.id) ?? 0))
+          .slice(0, FILE_NODE_CAP)
+          .map((n) => n.id),
+      );
+      finalNodes = modNodes.filter((n) => top.has(n.id));
+      const keep = new Set(finalNodes.map((n) => n.id));
+      finalEdges = modEdges.filter(([f, t]) => keep.has(f) && keep.has(t));
+    }
+    if (finalNodes.length > 0) {
       const layout = layoutDependencyGraph(
-        modNodes.map((n) => ({
+        finalNodes.map((n) => ({
           id: n.id,
           local: n.pkg === undefined,
           pkg: n.pkg,
           version: n.version,
         })),
-        modEdges,
+        finalEdges,
         report.insights.circularDepGroups,
         BASE_W,
         BASE_H,
@@ -62,7 +92,8 @@ export function DependencyGraphViz({ report }: { report: BundleStateReport }) {
       return {
         nodes: layout.nodes,
         links: layout.links,
-        cycleCount: report.insights.circularDepGroups.length,
+        totalNodes: total,
+        edges: finalEdges,
       };
     }
     const pkg = buildPackageGraph(report);
@@ -78,7 +109,12 @@ export function DependencyGraphViz({ report }: { report: BundleStateReport }) {
       BASE_W,
       BASE_H,
     );
-    return { nodes: layout.nodes, links: layout.links, cycleCount: 0 };
+    return {
+      nodes: layout.nodes,
+      links: layout.links,
+      totalNodes: pkg.nodes.length,
+      edges: pkg.edges,
+    };
   }, [report]);
 
   const onWheel = useCallback((e: React.WheelEvent<SVGSVGElement>) => {
@@ -95,6 +131,10 @@ export function DependencyGraphViz({ report }: { report: BundleStateReport }) {
       return { k, x, y };
     });
   }, []);
+
+  if (view === "flow") {
+    return <FlowList report={report} />;
+  }
 
   const onPointerDown = (e: React.PointerEvent<SVGSVGElement>) => {
     (e.target as Element).setPointerCapture?.(e.pointerId);
@@ -125,6 +165,7 @@ export function DependencyGraphViz({ report }: { report: BundleStateReport }) {
 
   const pos = new Map(nodes.map((n) => [n.id, n]));
   const radiusFor = (n: { inCycle: boolean; local: boolean }) => (n.inCycle ? 9 : n.local ? 7 : 6);
+  const truncated = totalNodes > FILE_NODE_CAP;
 
   return (
     <div className="relative h-full w-full">
@@ -165,9 +206,9 @@ export function DependencyGraphViz({ report }: { report: BundleStateReport }) {
         <span className="flex items-center gap-1">
           <span className="inline-block h-2 w-3 rounded-sm bg-[var(--tint-rose-fg)]" /> in cycle
         </span>
-        {cycleCount > 0 && (
-          <span className="text-[var(--tint-rose-fg)]">
-            ↻ {cycleCount} circular import{cycleCount > 1 ? "s" : ""}
+        {truncated && (
+          <span>
+            showing {nodes.length}/{totalNodes}
           </span>
         )}
       </div>
@@ -220,8 +261,6 @@ export function DependencyGraphViz({ report }: { report: BundleStateReport }) {
             const dx = t.x! - s.x!;
             const dy = t.y! - s.y!;
             const len = Math.hypot(dx, dy) || 1;
-            // Pull the endpoints back to the circle edges so the arrowhead
-            // lands on the target rim and the line starts at the source rim.
             const ux = dx / len;
             const uy = dy / len;
             const x1 = s.x! + ux * sr;
@@ -265,6 +304,91 @@ export function DependencyGraphViz({ report }: { report: BundleStateReport }) {
           ))}
         </g>
       </svg>
+    </div>
+  );
+}
+
+/** Edge-to-edge directed import list — no node atoms, mobile-safe. */
+function FlowList({ report }: { report: BundleStateReport }) {
+  const edges = report.moduleGraph?.edges ?? [];
+  const byId = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const n of report.moduleGraph?.nodes ?? []) {
+      const parts = n.id.split("/");
+      m.set(n.id, parts[parts.length - 1] || n.id);
+    }
+    return m;
+  }, [report]);
+  const cycleEdges = useMemo(() => {
+    const set = new Set<string>();
+    for (const g of report.insights.circularDepGroups) {
+      for (let i = 0; i < g.length; i++) {
+        const a = g[i];
+        const b = g[(i + 1) % g.length];
+        set.add(`${a} ${b}`);
+      }
+    }
+    return set;
+  }, [report]);
+
+  if (edges.length === 0) {
+    const pkg = buildPackageGraph(report);
+    if (pkg.edges.length === 0) {
+      return (
+        <div className="flex h-full items-center justify-center text-sm text-dim">
+          No import edges detected.
+        </div>
+      );
+    }
+    return (
+      <div className="h-full overflow-y-auto p-2">
+        <p className="mb-2 text-[11px] uppercase tracking-wide text-dim">
+          Package imports (no source maps)
+        </p>
+        <ul className="space-y-1">
+          {pkg.edges.map((e, i) => (
+            <li
+              key={i}
+              className="flex items-center gap-2 rounded border border-edge bg-well px-2 py-1 font-mono text-[12px]"
+            >
+              <span className="truncate text-ink">{e.source}</span>
+              <ArrowRight size={13} className="shrink-0 text-dim" aria-hidden />
+              <span className="truncate text-ink">{e.target}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-full overflow-y-auto p-2">
+      <p className="mb-2 text-[11px] uppercase tracking-wide text-dim">
+        Directed imports ({edges.length})
+      </p>
+      <ul className="space-y-1">
+        {edges.map(([from, to], i) => {
+          const inCycle = cycleEdges.has(`${from} ${to}`);
+          return (
+            <li
+              key={i}
+              className={`flex items-center gap-2 rounded border px-2 py-1 font-mono text-[12px] ${
+                inCycle
+                  ? "border-[var(--tint-rose-fg)] bg-[var(--tint-rose-bg)]"
+                  : "border-edge bg-well"
+              }`}
+            >
+              <span className="min-w-0 flex-1 truncate text-ink">{byId.get(from) ?? from}</span>
+              <ArrowRight
+                size={13}
+                className={inCycle ? "shrink-0 text-[var(--tint-rose-fg)]" : "shrink-0 text-dim"}
+                aria-hidden
+              />
+              <span className="min-w-0 flex-1 truncate text-ink">{byId.get(to) ?? to}</span>
+            </li>
+          );
+        })}
+      </ul>
     </div>
   );
 }

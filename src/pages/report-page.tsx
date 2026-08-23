@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link, Navigate, NavLink, Outlet, useParams } from "react-router-dom";
-import { FileArchive, FilePlus2, Download } from "lucide-react";
+import { FileArchive, FilePlus2, Download, LayoutGrid, Files, Eye, GitGraph } from "lucide-react";
 import { clsx } from "clsx";
-import { Badge, btn, btnActive, CopyButton, Spinner } from "@/components/ui";
+import { Badge, btn, CopyButton, Spinner } from "@/components/ui";
 import { Breadcrumb } from "@/components/breadcrumb";
 import { PageHeader } from "@/components/page-header";
 import { loadReport } from "@/db";
@@ -67,10 +67,10 @@ export function ReportPage() {
   }
 
   const tabs = [
-    { id: "treemap", label: "Treemap" },
-    { id: "files", label: "Files" },
-    { id: "preview", label: "Preview" },
-    { id: "inspector", label: "Inspector" },
+    { id: "treemap", label: "Treemap", icon: <LayoutGrid size={16} aria-hidden /> },
+    { id: "files", label: "Files", icon: <Files size={16} aria-hidden /> },
+    { id: "preview", label: "Preview", icon: <Eye size={16} aria-hidden /> },
+    { id: "inspector", label: "Inspector", icon: <GitGraph size={16} aria-hidden /> },
   ];
 
   const headerLeft = (
@@ -124,9 +124,14 @@ export function ReportPage() {
   return (
     <div className="flex min-h-0 flex-1 flex-col" aria-label={`Report for ${report.sourceName}`}>
       <PageHeader left={headerLeft} actions={headerActions} />
+
+      <div className="relative flex min-h-0 flex-1 flex-col pb-14 sm:pb-0">
+        <Outlet context={report} />
+      </div>
+
       <nav
         aria-label="Report views"
-        className="flex items-center gap-1 overflow-x-auto border-b border-edge bg-surface-2 px-2 py-1"
+        className="fixed inset-x-0 bottom-0 z-40 flex items-stretch gap-1 border-t border-edge bg-canvas/95 px-2 py-1.5 backdrop-blur sm:static sm:z-auto sm:border-t-0 sm:border-b sm:border-edge sm:bg-surface-2 sm:px-2 sm:py-1"
       >
         {tabs.map((t) => (
           <NavLink
@@ -135,20 +140,18 @@ export function ReportPage() {
             role="tab"
             className={({ isActive }) =>
               clsx(
-                btn,
-                "whitespace-nowrap px-2.5 py-1.5 text-xs min-h-[36px] min-w-[44px] flex-1 sm:flex-none",
-                isActive && btnActive,
+                "flex flex-1 flex-col items-center justify-center gap-0.5 rounded-lg border px-1 py-1.5 text-[11px] min-h-[44px] min-w-[44px] sm:flex-row sm:gap-1.5 sm:border-0 sm:px-2.5 sm:py-1.5 sm:text-xs",
+                isActive
+                  ? "border-accent/60 bg-accent/10 text-accent sm:border sm:border-accent/60"
+                  : "border-transparent text-dim hover:bg-surface-2 hover:text-ink",
               )
             }
           >
+            {t.icon}
             {t.label}
           </NavLink>
         ))}
       </nav>
-
-      <div className="relative flex min-h-0 flex-1 flex-col">
-        <Outlet context={report} />
-      </div>
     </div>
   );
 }

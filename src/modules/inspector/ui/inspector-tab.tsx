@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui";
 import { runInspector, type RuleFinding, type Severity } from "@/utils/rules";
 import { traceCycle } from "@/utils/cycles";
 import { displayModuleId, type ModuleIdMap } from "@/modules/inspector/lib/inspector";
-import { DependencyGraphViz } from "./dependency-graph-viz";
+import { DependencyGraphViz, type GraphView } from "./dependency-graph-viz";
 import type { BundleStateReport, ModuleNode } from "@/utils/types";
 
 const SEV_TONE: Record<Severity, "danger" | "accent" | "neutral" | "ok"> = {
@@ -48,6 +48,7 @@ export function InspectorTab() {
   }, [report]);
 
   const [selectedCycle, setSelectedCycle] = useState(0);
+  const [graphView, setGraphView] = useState<GraphView>("file");
   const trace = useMemo(() => {
     if (cycles.length === 0) return [] as string[];
     const g = cycles[Math.min(selectedCycle, cycles.length - 1)];
@@ -90,19 +91,29 @@ export function InspectorTab() {
 
       {/* Dependency graph visualization */}
       <div className="rounded-lg border border-edge bg-well">
-        <div className="flex items-center justify-between border-b border-edge px-3 py-1.5">
+        <div className="flex items-center justify-between gap-2 border-b border-edge px-3 py-1.5">
           <span className="text-[11px] uppercase tracking-wide text-dim">
             Import dependency graph
             {!report.moduleGraph?.hasContents && (
               <span className="ml-1 text-faint">(packages · no source maps)</span>
             )}
           </span>
-          <span className="text-[11px] tabular-nums text-faint">
-            {report.moduleGraph?.nodes.length ?? 0} module nodes · {edges.length} edges
-          </span>
+          <div className="flex shrink-0 items-center gap-1 rounded-lg border border-edge bg-surface-2 p-0.5">
+            {(["file", "flow"] as GraphView[]).map((v) => (
+              <button
+                key={v}
+                type="button"
+                onClick={() => setGraphView(v)}
+                aria-pressed={graphView === v}
+                className={`rounded px-2 py-0.5 text-[11px] ${graphView === v ? "bg-accent/15 text-accent" : "text-dim hover:text-ink"}`}
+              >
+                {v === "file" ? "File" : "Edge-to-edge"}
+              </button>
+            ))}
+          </div>
         </div>
         <div className="h-[460px] p-2">
-          <DependencyGraphViz report={report} />
+          <DependencyGraphViz report={report} view={graphView} />
         </div>
       </div>
 
