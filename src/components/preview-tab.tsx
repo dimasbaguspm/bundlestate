@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { RotateCw, ShieldAlert, Activity } from "lucide-react";
+import { RotateCw, ShieldAlert, Activity, FileCode2, Plus, X } from "lucide-react";
 import { btn, btnActive, btnPrimary, inputCls } from "@/components/ui";
 import {
   buildSrcDoc,
@@ -11,36 +11,51 @@ import {
 } from "@/lib/preview";
 import type { BundleStateReport } from "@/lib/types";
 
-/** Preview Sandbox tab (PRD §4.6): run a dropped JS asset in an isolated iframe. */
+const ENV_PRESETS: Record<string, Record<string, string>> = {
+  production: { NODE_ENV: "production", BASE_URL: "/" },
+  development: { NODE_ENV: "development", BASE_URL: "/" },
+  test: { NODE_ENV: "test", BASE_URL: "/" },
+};
+
+/** Preview Sandbox tab (PRD §4.6): render a dropped bundle in an isolated iframe. */
 export function PreviewTab({ report }: { report: BundleStateReport }) {
   const jsAssets = useMemo(
     () => report.assets.filter((a) => a.kind === "js" && a.rawBytes),
     [report],
   );
-  const [selected, setSelected] = useState(0);
+  const htmlAssets = useMemo(
+    () => report.assets.filter((a) => a.kind === "html" && a.rawBytes),
+    [report],
+  );
+
+  const [entryKind, setEntryKind] = useState<"html" | "js">(htmlAssets.length > 0 ? "html" : "js");
+  const [htmlIndex, setHtmlIndex] = useState(0);
+  const [injected, setInjected] = useState<Set<number>>(() => new Set(jsAssets.map((_, i) => i)));
   const [mount, setMount] = useState("");
-  const [varKey, setVarKey] = useState("NODE_ENV");
-  const [varVal, setVarVal] = useState("production");
+  const [vars, setVars] = useState<Record<string, string>>({ NODE_ENV: "production" });
   const [intercept, setIntercept] = useState(true);
-  const [env, setEnv] = useState<PreviewEnv>({
-    vars: { NODE_ENV: "production" },
-    mount: "",
-    interceptNetwork: true,
-  });
   const [console_, setConsole] = useState<PreviewConsoleEntry[]>([]);
   const [netCalls, setNetCalls] = useState<PreviewNetCall[]>([]);
   const [profile, setProfile] = useState<PreviewProfile | null>(null);
   const [nonce, setNonce] = useState(0);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
-  const asset = jsAssets[selected];
-  const srcDoc = useMemo(() => {
-    if (!asset) return "";
-    return buildSrcDoc(decodeAsset(asset.rawBytes), env);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [asset, env, nonce]);
+  const env: PreviewEnv = useMemo(
+    () => ({ vars, mount, interceptNetwork: intercept }),
+    [vars, mount, intercept],
+  );
 
-  // Console / network / profile bridge from the sandbox iframe.
+  const srcDoc = useMemo(() => {
+    const html = entryKind === "html" && htmlAssets[htmlIndex]
+      ? decodeAsset(htmlAssets[htmlIndex].rawBytes)
+      : undefined;
+    const js = jsAssets
+      .filter((_, i) => injected.has(i))
+      .map((a) => decodeAsset(a.rawBytes));
+    return buildSrcDoc({ html, jsAssets: js, env });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [entryKind, htmlIndex, injected, env, jsAssets, nonce]);
+
   useEffect(() => {
     const onMessage = (e: MessageEvent) => {
       const d = e.data;
@@ -50,22 +65,13 @@ export function PreviewTab({ report }: { report: BundleStateReport }) {
       } else if (d.__bsNet) {
         setNetCalls((prev) => [...prev, { method: d.method, url: d.url, blocked: d.blocked, at: d.at }]);
       } else if (d.__bsProfile) {
-        setProfile({
-          mountMs: d.mountMs,
-          netCalls: d.netCalls,
-          blockedNet: d.blockedNet,
-          resources: d.resources,
-          longTasks: d.longTasks,
-          errors: d.errors,
-          at: d.at,
-        });
+        setProfile({ mountMs: d.mountMs, netCalls: d.netCalls, blockedNet: d.blockedNet, resources: d.resources, longTasks: d.longTasks, errors: d.errors, at: d.at });
       }
     };
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
   }, []);
 
-  // Reset state when the selected asset or env remounts.
   useEffect(() => {
     setConsole([]);
     setNetCalls([]);
@@ -73,25 +79,20 @@ export function PreviewTab({ report }: { report: BundleStateReport }) {
   }, [srcDoc]);
 
   const remount = () => setNonce((n) => n + 1);
-
-  const applyVar = () => {
-    if (!varKey.trim()) return;
-    setEnv((e) => ({ ...e, vars: { ...e.vars, [varKey.trim()]: varVal } }));
-  };
-
-  const toggleIntercept = () => {
-    setIntercept((v) => {
-      const next = !v;
-      setEnv((e) => ({ ...e, interceptNetwork: next }));
+  const toggleInject = (i: number) =>
+    setInjected((prev) => {
+      const next = new Set(prev);
+      if (next.has(i)) next.delete(i);
+      else next.add(i);
       return next;
     });
-  };
+  const applyPreset = (name: keyof typeof ENV_PRESETS) => setVars({ ...vars, ...ENV_PRESETS[name] });
 
-  if (jsAssets.length === 0) {
+  if (jsAssets.length === 0 && htmlAssets.length === 0) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-2 text-dim">
-        <p className="text-sm">No JS assets with source to preview.</p>
-        <p className="text-xs text-faint">Drop a build zip that includes raw .js assets.</p>
+        <p className="text-sm">No JS or HTML assets with source to preview.</p>
+        <p className="text-xs text-faint">Drop a build zip that includes raw .js / .html assets.</p>
       </div>
     );
   }
@@ -99,32 +100,43 @@ export function PreviewTab({ report }: { report: BundleStateReport }) {
   return (
     <div className="flex min-h-0 w-full flex-1 flex-col gap-2 p-2">
       <div className="flex flex-wrap items-center gap-2">
-        <div role="tablist" aria-label="Preview asset" className="flex items-center rounded-lg border border-edge bg-surface-2 p-0.5">
-          {jsAssets.map((a, i) => (
-            <button
-              key={a.name}
-              type="button"
-              role="tab"
-              aria-selected={i === selected}
-              className={`px-2.5 py-1 text-xs ${btn} ${i === selected ? btnActive : ""}`}
-              onClick={() => setSelected(i)}
-            >
-              {a.name.split("/").pop()}
-            </button>
-          ))}
+        {/* Entry selector */}
+        <div role="tablist" aria-label="Entry type" className="flex items-center rounded-lg border border-edge bg-surface-2 p-0.5">
+          <button type="button" role="tab" aria-selected={entryKind === "html"} className={`px-2.5 py-1 text-xs ${btn} ${entryKind === "html" ? btnActive : ""}`} onClick={() => setEntryKind("html")} disabled={htmlAssets.length === 0}>
+            <FileCode2 size={14} aria-hidden /> HTML entry
+          </button>
+          <button type="button" role="tab" aria-selected={entryKind === "js"} className={`px-2.5 py-1 text-xs ${btn} ${entryKind === "js" ? btnActive : ""}`} onClick={() => setEntryKind("js")}>
+            JS entry
+          </button>
         </div>
-        <button
-          type="button"
-          className={`${btn} ${intercept ? btnActive : ""}`}
-          onClick={toggleIntercept}
-          aria-pressed={intercept}
-        >
+
+        {entryKind === "html" && htmlAssets.length > 0 && (
+          <select aria-label="HTML entry file" className={inputCls} value={htmlIndex} onChange={(e) => setHtmlIndex(Number(e.target.value))}>
+            {htmlAssets.map((a, i) => (
+              <option key={a.name} value={i}>{a.name.split("/").pop()}</option>
+            ))}
+          </select>
+        )}
+
+        <button type="button" className={`${btn} ${intercept ? btnActive : ""}`} onClick={() => setIntercept((v) => !v)} aria-pressed={intercept}>
           <ShieldAlert size={14} aria-hidden /> Network {intercept ? "blocked" : "allowed"}
         </button>
         <button type="button" className={btnPrimary} onClick={remount}>
           <RotateCw size={14} aria-hidden /> Remount
         </button>
       </div>
+
+      {/* JS asset injection toggles (only meaningful for HTML entry) */}
+      {entryKind === "html" && jsAssets.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1">
+          <span className="text-[11px] uppercase tracking-wide text-faint">Inject JS</span>
+          {jsAssets.map((a, i) => (
+            <button key={a.name} type="button" className={`rounded px-2 py-0.5 text-[11px] ${injected.has(i) ? btnActive : btn}`} onClick={() => toggleInject(i)}>
+              {a.name.split("/").pop()}
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="grid min-h-0 flex-1 grid-cols-1 gap-2 lg:grid-cols-[1fr_320px]">
         {/* Sandbox */}
@@ -143,26 +155,25 @@ export function PreviewTab({ report }: { report: BundleStateReport }) {
         </div>
 
         {/* Config + console + profile */}
-        <div className="flex min-h-0 flex-col gap-2">
+        <div className="flex min-h-0 flex-col gap-2 overflow-y-auto">
           <div className="rounded-lg border border-edge bg-well p-2">
-            <div className="mb-1 text-[11px] uppercase tracking-wide text-dim">Env vars (import.meta.env / process.env)</div>
+            <div className="mb-1 text-[11px] uppercase tracking-wide text-dim">Environment (changeable)</div>
             <div className="mb-1 flex flex-wrap gap-1">
-              {Object.entries(env.vars).map(([k, v]) => (
-                <span key={k} className="rounded bg-surface-2 px-1.5 py-0.5 font-mono text-[11px] text-ink">
-                  {k}={v}
-                </span>
+              {Object.keys(ENV_PRESETS).map((p) => (
+                <button key={p} type="button" className={`rounded px-2 py-0.5 text-[11px] ${btn}`} onClick={() => applyPreset(p as keyof typeof ENV_PRESETS)}>{p}</button>
               ))}
             </div>
-            <div className="flex gap-1">
-              <input value={varKey} onChange={(e) => setVarKey(e.target.value)} placeholder="KEY" aria-label="env key" className={inputCls} />
-              <input value={varVal} onChange={(e) => setVarVal(e.target.value)} placeholder="value" aria-label="env value" className={inputCls} />
-              <button type="button" className={btn} onClick={applyVar}>Add</button>
-            </div>
+            {Object.entries(vars).map(([k, v]) => (
+              <div key={k} className="mb-1 flex items-center gap-1">
+                <span className="rounded bg-surface-2 px-1.5 py-0.5 font-mono text-[11px] text-ink">{k}={v}</span>
+                <button type="button" aria-label={`remove ${k}`} className="text-faint hover:text-[var(--tint-rose-fg)]" onClick={() => setVars((prev) => { const n = { ...prev }; delete n[k]; return n; })}><X size={12} /></button>
+              </div>
+            ))}
+            <VarAdder onAdd={(k, v) => setVars((prev) => ({ ...prev, [k]: v }))} />
             <div className="mt-1 text-[11px] text-dim">Mount node</div>
-            <input value={mount} onChange={(e) => { setMount(e.target.value); setEnv((x) => ({ ...x, mount: e.target.value })); }} placeholder="#app or leave blank for #bs-root" aria-label="mount node" className={inputCls} />
+            <input value={mount} onChange={(e) => setMount(e.target.value)} placeholder="#app or leave blank for #bs-root" aria-label="mount node" className={inputCls} />
           </div>
 
-          {/* Execution profiler (§4.6.3) */}
           <div className="rounded-lg border border-edge bg-well p-2">
             <div className="mb-1 flex items-center gap-1 text-[11px] uppercase tracking-wide text-dim">
               <Activity size={12} aria-hidden /> Execution profile
@@ -183,9 +194,7 @@ export function PreviewTab({ report }: { report: BundleStateReport }) {
                 <div className="text-[11px] uppercase tracking-wide text-dim">Network attempts</div>
                 <div className="mt-1 max-h-24 overflow-y-auto font-mono text-[11px]">
                   {netCalls.slice(0, 20).map((n, i) => (
-                    <div key={i} className="truncate text-[var(--tint-rose-fg)]" title={n.url}>
-                      ⛔ {n.method} {n.url}
-                    </div>
+                    <div key={i} className="truncate text-[var(--tint-rose-fg)]" title={n.url}>⛔ {n.method} {n.url}</div>
                   ))}
                 </div>
               </div>
@@ -209,6 +218,20 @@ export function PreviewTab({ report }: { report: BundleStateReport }) {
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function VarAdder({ onAdd }: { onAdd: (k: string, v: string) => void }) {
+  const [k, setK] = useState("");
+  const [v, setV] = useState("");
+  return (
+    <div className="mt-1 flex gap-1">
+      <input value={k} onChange={(e) => setK(e.target.value)} placeholder="KEY" aria-label="new env key" className={inputCls} />
+      <input value={v} onChange={(e) => setV(e.target.value)} placeholder="value" aria-label="new env value" className={inputCls} />
+      <button type="button" className={btn} onClick={() => { if (k.trim()) { onAdd(k.trim(), v); setK(""); setV(""); } }}>
+        <Plus size={12} aria-hidden /> Add
+      </button>
     </div>
   );
 }
