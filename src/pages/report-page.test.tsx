@@ -12,9 +12,6 @@ import { makeReport } from "@/test/fixtures";
 vi.mock("@/components/Treemap", () => ({
   Treemap: () => <div data-testid="treemap-mock" />,
 }));
-vi.mock("@/components/list-table", () => ({
-  ListTable: () => <div data-testid="list-mock" />,
-}));
 
 function renderRoute(initialPath: string) {
   return render(

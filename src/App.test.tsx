@@ -14,9 +14,6 @@ vi.mock("@/state/runJob", () => ({
 vi.mock("@/components/Treemap", () => ({
   Treemap: () => <div data-testid="treemap-mock" />,
 }));
-vi.mock("@/components/list-table", () => ({
-  ListTable: () => <div data-testid="list-mock" />,
-}));
 
 describe("App", () => {
   beforeEach(() => {

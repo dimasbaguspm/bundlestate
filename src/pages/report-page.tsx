@@ -4,7 +4,6 @@ import { FileArchive } from "lucide-react";
 import { clsx } from "clsx";
 import { Badge, btn, btnActive, CopyButton, Spinner } from "@/components/ui";
 import { TreemapTab } from "@/components/treemap-tab";
-import { ListTableTab } from "@/components/list-table-tab";
 import { FilesTab } from "@/components/files-tab";
 import { PreviewTab } from "@/components/preview-tab";
 import { InspectorTab } from "@/components/inspector-tab";
@@ -16,7 +15,7 @@ import { buildMarkdownReport } from "@/lib/reportMarkdown";
 import { useBundleStore } from "@/state/store";
 import type { BundleStateReport } from "@/lib/types";
 
-type Tab = "treemap" | "list" | "files" | "preview" | "inspector" | "cycles" | "whatif" | "diff";
+type Tab = "treemap" | "files" | "preview" | "inspector" | "cycles" | "whatif" | "diff";
 
 /**
  * Detail page at `/r/:reportId`. Prefers the in-memory zustand copy (fresh
@@ -33,7 +32,6 @@ export function ReportPage() {
   const [missing, setMissing] = useState(false);
   const [tab, setTab] = useState<Tab>("treemap");
   const [treemapFilter, setTreemapFilter] = useState("");
-  const [listFilter, setListFilter] = useState("");
   const [filesFilter, setFilesFilter] = useState("");
 
   // Resolve the report: store copy first, then IndexedDB.
@@ -73,7 +71,6 @@ export function ReportPage() {
 
   const tabs: { id: Tab; label: string }[] = [
     { id: "treemap", label: "Treemap" },
-    { id: "list", label: "List" },
     { id: "files", label: "Files" },
     { id: "preview", label: "Preview" },
     { id: "inspector", label: "Inspector" },
@@ -122,9 +119,6 @@ export function ReportPage() {
       <div className="relative flex min-h-0 flex-1 flex-col">
         {tab === "treemap" && (
           <TreemapTab report={report} filter={treemapFilter} onFilter={setTreemapFilter} />
-        )}
-        {tab === "list" && (
-          <ListTableTab report={report} filter={listFilter} onFilter={setListFilter} />
         )}
         {tab === "files" && (
           <FilesTab report={report} filter={filesFilter} onFilter={setFilesFilter} />
