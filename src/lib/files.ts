@@ -1,7 +1,8 @@
 import type { StaticFile, StaticFileType } from "./types";
-import type { ZipEntry } from "./zip";
+import { toBase64, type ZipEntry } from "./zip";
 
 const IGNORED = /(^|\/)(node_modules|\.git)(\/|$)/;
+const RAW_BYTES_CAP = 512 * 1024; // keep the report payload sane
 
 const TYPE_BY_EXT: Record<string, StaticFileType> = {
   png: "image", jpg: "image", jpeg: "image", gif: "image", webp: "image",
@@ -31,10 +32,15 @@ export function collectStaticFiles(entries: ZipEntry[]): StaticFile[] {
   const files: StaticFile[] = [];
   for (const entry of entries) {
     if (!isStatic(entry.name)) continue;
+    let raw: string | undefined;
+    if (entry.bytes.length <= RAW_BYTES_CAP) {
+      raw = toBase64(entry.bytes);
+    }
     files.push({
       path: entry.name,
       sizeBytes: entry.sizeBytes,
       type: fileType(entry.name),
+      rawBytes: raw,
     });
   }
   return files.sort((a, b) => b.sizeBytes - a.sizeBytes || a.path.localeCompare(b.path));

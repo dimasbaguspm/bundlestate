@@ -31,6 +31,12 @@ export interface StaticFile {
   path: string;
   sizeBytes: number;
   type: StaticFileType;
+  /**
+   * Original file source as base64 (when the parser kept it). Empty for very
+   * large files to keep the report size sane. Lets the Files tab preview the
+   * raw/binary content in an editor.
+   */
+  rawBytes?: string;
 }
 
 export type StaticFileType =
