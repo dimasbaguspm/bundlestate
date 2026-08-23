@@ -12,7 +12,7 @@ export function BottomBar({ onOpenHelp }: { onOpenHelp: () => void }) {
   const { theme, toggle } = useTheme();
 
   return (
-    <footer className="relative z-30 shrink-0 border-t border-edge">
+    <footer className="relative z-30 hidden shrink-0 border-t border-edge sm:block">
       <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 px-3 py-1">
         <div className="flex items-center justify-start gap-0.5">
           <button
