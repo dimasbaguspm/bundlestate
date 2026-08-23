@@ -63,6 +63,18 @@ describe("layoutTreemap", () => {
   });
 });
 
+describe("squarify tiling", () => {
+  it("applies treemapSquarify so leaves are near-square, not slice/rows", () => {
+    const rects = layoutTreemap(report(), 600, 400).filter((r) => r.isPackage);
+    // With squarify, a leaf's aspect ratio should stay reasonably close to 1
+    // (never a degenerate full-width strip). Assert no leaf is a thin sliver.
+    for (const r of rects) {
+      const ar = Math.max(r.width, r.height) / Math.min(r.width, r.height);
+      expect(ar).toBeLessThan(8);
+    }
+  });
+});
+
 describe("buildTreemapData", () => {
   it("groups assets under the report name", () => {
     const data = buildTreemapData(report());
