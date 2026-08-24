@@ -335,10 +335,12 @@ export function DependencyGraphViz({
   );
 }
 
-/** Edge-to-edge directed import list — no node atoms, mobile-safe. Shows
- * every import edge that exists: module-level edges from the source maps
- * first, then (when module edges are thin) package-map edges so the list is
- * never just a couple of entries. */
+/** Edge-to-edge directed import list — no node atoms, mobile-safe. Shows the
+ * imports between OUR OWN source files (recovered from the source maps), not
+ * the package-to-package dependency graph. Each row is `ourFile → what it
+ * imports` (another local file or a package). When a bundle carries no
+ * source-map imports, it falls back to the app→package map so the list is
+ * still useful, but package-internal edges are never shown. */
 function FlowList({ report }: { report: BundleStateReport }) {
   const { rows, labelFor, hasModuleEdges } = useMemo(() => {
     const modEdges: [string, string][] = report.moduleGraph?.edges ?? [];
@@ -355,21 +357,17 @@ function FlowList({ report }: { report: BundleStateReport }) {
       seen.add(key);
       out.push({ from, to });
     }
-    // Supplement with package-map edges when module edges are sparse, so the
-    // user sees the full import flow rather than just a couple of entries.
-    if (modEdges.length < 25) {
-      const g = report.graph;
-      const addPkg = (from: string, to: string) => {
-        const key = `${from} ${to}`;
-        if (seen.has(key)) return;
-        seen.add(key);
-        out.push({ from, to });
-      };
-      for (const [app, pkgs] of Object.entries(g.appToPkg ?? {})) {
-        for (const p of pkgs) addPkg(app, p);
-      }
-      for (const [pkg, sub] of Object.entries(g.pkgToSubPkg ?? {})) {
-        for (const s of sub) addPkg(pkg, s);
+    // Fallback only when no file-level imports were parsed: show our app's
+    // direct package dependencies. Package-to-package edges are intentionally
+    // excluded — the user wants their own files, not the dependency graph.
+    if (modEdges.length === 0) {
+      for (const [app, pkgs] of Object.entries(report.graph.appToPkg ?? {})) {
+        for (const p of pkgs) {
+          const key = `${app} ${p}`;
+          if (seen.has(key)) continue;
+          seen.add(key);
+          out.push({ from: app, to: p });
+        }
       }
     }
     const labelFor = (id: string) => labelMap.get(id) ?? id.split("/").pop() ?? id;
