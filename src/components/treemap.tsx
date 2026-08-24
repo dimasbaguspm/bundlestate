@@ -20,12 +20,12 @@ interface PointerTrack {
 }
 
 /**
- * Responsive D3 treemap. The SVG element itself grows with the zoom level
- * (`width = w * k`, `height = h * k`) inside a scrollable container, so
- * zooming genuinely expands the rectangles and you pan/scroll to explore —
- * the content is never clipped. Supports wheel-zoom, one-finger drag pan,
- * and two-finger pinch-zoom (touch). Labels appear (and grow) once you zoom
- * in past a threshold, so detail is revealed as rectangles expand.
+ * Responsive D3 treemap. The SVG keeps the container size and a `viewBox`,
+ * with an inner <g transform="translate(x,y) scale(k)"> carrying the zoom and
+ * pan — so zooming genuinely **expands the rectangles** (not just the canvas),
+ * and panning scrolls within. Supports wheel-zoom, one-finger drag pan, and
+ * two-finger pinch-zoom (touch). Labels appear (and grow) once you zoom in
+ * past a threshold, so detail is revealed as rectangles expand.
  */
 export function Treemap({
   report,
@@ -63,6 +63,7 @@ export function Treemap({
   const zoomAt = useCallback((factor: number, cx: number, cy: number) => {
     setPan((p) => {
       const k = Math.min(8, Math.max(0.5, p.k * factor));
+      // Keep the point under the cursor fixed in viewBox space.
       const x = cx - (cx - p.x) * (k / p.k);
       const y = cy - (cy - p.y) * (k / p.k);
       return { k, x, y };
@@ -74,11 +75,12 @@ export function Treemap({
       e.preventDefault();
       const rect = ref.current?.getBoundingClientRect();
       if (!rect || size.w === 0) return;
-      const cx = e.clientX - rect.left + pan.x;
-      const cy = e.clientY - rect.top + pan.y;
+      // cursor position in viewBox space
+      const cx = (e.clientX - rect.left - pan.x) / pan.k;
+      const cy = (e.clientY - rect.top - pan.y) / pan.k;
       zoomAt(e.deltaY < 0 ? 1.15 : 1 / 1.15, cx, cy);
     },
-    [pan.x, pan.y, size.w, zoomAt],
+    [pan.x, pan.y, pan.k, size.w, zoomAt],
   );
 
   // --- Pinch + one-finger pan (touch) -------------------------------------
@@ -109,14 +111,18 @@ export function Treemap({
     if (pts.length === 2 && pinchRef.current) {
       const [a, b] = pts;
       const dist = Math.hypot(a.x - b.x, a.y - b.y);
-      const cx = (a.x + b.x) / 2;
-      const cy = (a.y + b.y) / 2;
       const rect = ref.current?.getBoundingClientRect();
-      const localCx = (rect ? cx - rect.left : cx) + pan.x;
-      const localCy = (rect ? cy - rect.top : cy) + pan.y;
+      const localCx = rect ? (a.x + b.x) / 2 - rect.left : (a.x + b.x) / 2;
+      const localCy = rect ? (a.y + b.y) / 2 - rect.top : (a.y + b.y) / 2;
+      const cx = (localCx - pan.x) / pan.k;
+      const cy = (localCy - pan.y) / pan.k;
       const factor = dist / (pinchRef.current.dist || dist);
-      pinchRef.current = { dist, cx, cy };
-      zoomAt(factor, localCx, localCy);
+      pinchRef.current = {
+        dist,
+        cx: (a.x + b.x) / 2,
+        cy: (a.y + b.y) / 2,
+      };
+      zoomAt(factor, cx, cy);
       return;
     }
     if (dragRef.current) {
@@ -126,7 +132,11 @@ export function Treemap({
     }
   };
   const onPointerUp = (e: React.PointerEvent<SVGSVGElement>) => {
-    (e.target as Element).releasePointerCapture?.(e.pointerId);
+    try {
+      (e.target as Element).releasePointerCapture?.(e.pointerId);
+    } catch {
+      /* ignore */
+    }
     delete pointersRef.current[e.pointerId];
     if (Object.keys(pointersRef.current).length < 2) pinchRef.current = null;
     if (Object.keys(pointersRef.current).length === 0) dragRef.current = null;
@@ -155,9 +165,6 @@ export function Treemap({
     }
   }
   const assets = rects.filter((r) => !r.isPackage);
-  const w = size.w * pan.k;
-  const h = size.h * pan.k;
-  // Reveal text detail once zoomed in; expand the label threshold with zoom.
   const zoom = pan.k;
   const pkgLabelMin = zoom > 1.4 ? 14 : 40;
   const fileLabelMin = zoom > 1.4 ? 16 : 48;
@@ -165,7 +172,7 @@ export function Treemap({
   return (
     <div
       ref={ref}
-      className={clsx("relative min-h-0 w-full overflow-auto", className)}
+      className={clsx("relative min-h-0 w-full overflow-hidden", className)}
       aria-label="Package size treemap"
     >
       {size.w > 0 && (
@@ -175,7 +182,7 @@ export function Treemap({
               type="button"
               aria-label="Zoom in"
               className="rounded border border-edge bg-surface-2 p-1.5 text-ink hover:bg-well"
-              onClick={() => zoomAt(1.25, w / 2, h / 2)}
+              onClick={() => zoomAt(1.25, size.w / 2, size.h / 2)}
             >
               <ZoomIn size={14} />
             </button>
@@ -183,7 +190,7 @@ export function Treemap({
               type="button"
               aria-label="Zoom out"
               className="rounded border border-edge bg-surface-2 p-1.5 text-ink hover:bg-well"
-              onClick={() => zoomAt(1 / 1.25, w / 2, h / 2)}
+              onClick={() => zoomAt(1 / 1.25, size.w / 2, size.h / 2)}
             >
               <ZoomOut size={14} />
             </button>
@@ -197,76 +204,74 @@ export function Treemap({
             </button>
           </div>
           <svg
-            width={w}
-            height={h}
+            width={size.w}
+            height={size.h}
+            viewBox={`0 0 ${size.w} ${size.h}`}
             role="img"
             aria-label="Package size treemap"
-            className="block touch-none select-none"
-            style={{ transform: `translate(${pan.x}px, ${pan.y}px)` }}
+            className="block h-full w-full touch-none select-none"
             onWheel={onWheel}
             onPointerDown={onPointerDown}
             onPointerMove={onPointerMove}
             onPointerUp={onPointerUp}
             onPointerCancel={onPointerUp}
           >
-            {/* asset (file) regions first */}
-            {assets.map((r, i) => (
-              <rect
-                key={`a${i}`}
-                x={r.x}
-                y={r.y}
-                width={r.width}
-                height={r.height}
-                fill={ASSET_FILL}
-                stroke={ASSET_STROKE}
-                strokeWidth={1}
-              />
-            ))}
-            {/* package leaves */}
-            {rects.map((r, i) =>
-              r.isPackage ? (
+            <g transform={`translate(${pan.x},${pan.y}) scale(${pan.k})`}>
+              {assets.map((r, i) => (
                 <rect
-                  key={`p${i}`}
+                  key={`a${i}`}
                   x={r.x}
                   y={r.y}
                   width={r.width}
                   height={r.height}
-                  fill={r.fullName ? colors.get(r.fullName) : "#27402c"}
-                  rx={1}
+                  fill={ASSET_FILL}
+                  stroke={ASSET_STROKE}
+                  strokeWidth={1 / pan.k}
                 />
-              ) : null,
-            )}
-            {/* package labels — shown when big enough, or once zoomed in */}
-            {rects.map((r, i) =>
-              r.isPackage && r.width > pkgLabelMin && r.height > 14 ? (
-                <text
-                  key={`l${i}`}
-                  x={r.x + 3}
-                  y={r.y + Math.min(13 * zoom, r.height / 2)}
-                  fill={LABEL_FILL}
-                  fontSize={10 * Math.min(zoom, 1.6)}
-                  className="select-none pointer-events-none"
-                >
-                  {r.name}
-                </text>
-              ) : null,
-            )}
-            {/* file-name labels on top */}
-            {assets.map((r, i) =>
-              r.width > fileLabelMin && r.height > 18 ? (
-                <text
-                  key={`f${i}`}
-                  x={r.x + 3}
-                  y={r.y + 11 * Math.min(zoom, 1.6)}
-                  fill={LABEL_FILL}
-                  fontSize={9 * Math.min(zoom, 1.6)}
-                  opacity={0.85}
-                  className="select-none pointer-events-none"
-                >
-                  {fitText(r.name, r.width - 6)}
-                </text>
-              ) : null,
-            )}
+              ))}
+              {rects.map((r, i) =>
+                r.isPackage ? (
+                  <rect
+                    key={`p${i}`}
+                    x={r.x}
+                    y={r.y}
+                    width={r.width}
+                    height={r.height}
+                    fill={r.fullName ? colors.get(r.fullName) : "#27402c"}
+                    rx={1}
+                  />
+                ) : null,
+              )}
+              {rects.map((r, i) =>
+                r.isPackage && r.width > pkgLabelMin && r.height > 14 ? (
+                  <text
+                    key={`l${i}`}
+                    x={r.x + 3}
+                    y={r.y + Math.min(13 * zoom, r.height / 2)}
+                    fill={LABEL_FILL}
+                    fontSize={10 * Math.min(zoom, 1.6)}
+                    className="select-none pointer-events-none"
+                  >
+                    {r.name}
+                  </text>
+                ) : null,
+              )}
+              {assets.map((r, i) =>
+                r.width > fileLabelMin && r.height > 18 ? (
+                  <text
+                    key={`f${i}`}
+                    x={r.x + 3}
+                    y={r.y + 11 * Math.min(zoom, 1.6)}
+                    fill={LABEL_FILL}
+                    fontSize={9 * Math.min(zoom, 1.6)}
+                    opacity={0.85}
+                    className="select-none pointer-events-none"
+                  >
+                    {fitText(r.name, r.width - 6)}
+                  </text>
+                ) : null,
+              )}
+            </g>
           </svg>
         </>
       )}
